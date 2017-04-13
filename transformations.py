@@ -1,6 +1,6 @@
 import numpy as np
 import transformationsf as tran
-import utilities.transformations as tr
+import transformMod as tr
 import pdb
 
 def transform(rays,dx,dy,dz,rx,ry,rz,ind=None,coords=None):
