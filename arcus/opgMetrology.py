@@ -1,13 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pdb
-import reconstruct
+import PyXFocus.reconstruct as reconstruct
 
-import traces.surfaces as surf
-import traces.transformations as tran
-import traces.analyses as anal
-import traces.sources as sources
-import traces.conicsolve as conic
+import PyXFocus.surfaces as surf
+import PyXFocus.transformations as tran
+import PyXFocus.analyses as anal
+import PyXFocus.sources as sources
+import PyXFocus.conicsolve as conic
 
 import utilities.imaging.man as man
 
