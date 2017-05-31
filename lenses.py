@@ -1,7 +1,7 @@
 #Module to define singlet and doublet lenses
 #Explicitly put in commonly used lenses such as Thorlabs doublets
 import surfaces as surf
-import transformations as tran
+import transformMod as tran
 import pdb
 
 def singlet(rays,r1,r2,thick,nl,reverse=False):

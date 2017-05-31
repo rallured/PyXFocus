@@ -89,7 +89,7 @@ def rectArray(xsize,ysize,num):
     ux = np.copy(l)
     uy = np.copy(l)
     uz = np.copy(l)
-    return opd,x,y,z,l,m,n,ux,uy,uz
+    return [opd,x,y,z,l,m,n,ux,uy,uz]
 
 def convergingbeam(zset,rin,rout,tmin,tmax,num,lscat):
     """Converging sub-apertured annulus beam
@@ -111,7 +111,7 @@ def convergingbeam(zset,rin,rout,tmin,tmax,num,lscat):
     uy = np.repeat(0.,num)
     uz = np.repeat(0.,num)
     opd = np.repeat(0.,num)
-    return opd,x,y,z,l,m,n,ux,uy,uz
+    return [opd,x,y,z,l,m,n,ux,uy,uz]
 
 def convergingbeam2(zset,xmin,xmax,ymin,ymax,num,lscat):
     """Rectangular converging beam
@@ -132,7 +132,7 @@ def convergingbeam2(zset,xmin,xmax,ymin,ymax,num,lscat):
     uy = np.repeat(0.,num)
     uz = np.repeat(0.,num)
     opd = np.repeat(0.,num)
-    return opd,x,y,z,l,m,n,ux,uy,uz
+    return [opd,x,y,z,l,m,n,ux,uy,uz]
 
 def rectbeam(xhalfwidth,yhalfwidth,num):
     """Rectangular beam pointing in +z direction

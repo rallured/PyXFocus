@@ -4,9 +4,9 @@ import surfacesf as surf
 import zernsurf as zern
 import zernikemod
 import woltsurf as wolt
-import traces.transformations as tran
-from traces.analyses import analyticYPlane,analyticXPlane,analyticImagePlane
-import traces.conicsolve as con
+import transformations as tran
+from analyses import analyticYPlane,analyticXPlane,analyticImagePlane
+import conicsolve as con
 import pdb
 
 def flat(rays,ind=None,nr=None):
