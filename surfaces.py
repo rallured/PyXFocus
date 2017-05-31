@@ -1,11 +1,11 @@
 #Module to collect routines to trace rays to various surfaces
 import numpy as np
-import surfacesf as surf
-import zernsurf as zern
-import woltsurf as wolt
-import transformations as tran
-from analyses import analyticYPlane,analyticXPlane,analyticImagePlane
-import conicsolve as con
+import PyXFocus.surfacesf as surf
+import PyXFocus.zernsurf as zern
+import PyXFocus.woltsurf as wolt
+import PyXFocus.transformations as tran
+from PyXFocus.analyses import analyticYPlane,analyticXPlane,analyticImagePlane
+import PyXFocus.conicsolve as con
 import pdb
 
 def flat(rays,ind=None,nr=None):
