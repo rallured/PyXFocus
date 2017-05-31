@@ -2,12 +2,15 @@
 import numpy as np
 import surfacesf as surf
 import zernsurf as zern
-import zernikemod
 import woltsurf as wolt
 import transformations as tran
 from analyses import analyticYPlane,analyticXPlane,analyticImagePlane
 import conicsolve as con
+<<<<<<< HEAD
 import pdb
+=======
+#import pdb
+>>>>>>> 5a092fbd5c26a16584199abece769ad75fdf1908
 
 def flat(rays,ind=None,nr=None):
     """Trace rays to the XY plane
