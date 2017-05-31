@@ -4,11 +4,11 @@ import pdb
 import scipy.interpolate as inte
 import astropy.io.fits as pyfits
 
-import traces.surfaces as surf
-import traces.transformations as tran
-import traces.analyses as anal
-import traces.sources as sources
-import traces.conicsolve as conic
+import PyXFocus.surfaces as surf
+import PyXFocus.transformations as tran
+import PyXFocus.analyses as anal
+import PyXFocus.sources as sources
+import PyXFocus.conicsolve as conic
 
 import inducedPolarization as pol
 
@@ -129,7 +129,7 @@ def defineRx(N=3,L=200.,nodegap=25.,rnodes=False):
 
 
 def traceXRS(smax,pmin,fun,L=200.,nodegap=25.,Nshell=1e3,energy=1000.,\
-             rough=1.,offaxis=0.):
+             rough=1.,offaxis=0.,rrays=False):
     """
     Using output from defineRx, trace the nodes in a Lynx design.
     Provide number of sections, and the zeta as a function of radius
@@ -145,7 +145,7 @@ def traceXRS(smax,pmin,fun,L=200.,nodegap=25.,Nshell=1e3,energy=1000.,\
         rad = np.array([])
         rout = 0.
         #Compute shell gap
-        gap = (pmin[sec]+L-1e4)*3e-3
+        gap = (pmin[sec]+L-1e4)*3e-3+0.4 #4 mm glass thickness plus vignetting
         #First node position
         rad = np.append(rad,200.+(1300./N)*sec)
         rout = conic.primrad(pmin[sec]+L,rad[-1],\
@@ -197,7 +197,7 @@ def traceXRS(smax,pmin,fun,L=200.,nodegap=25.,Nshell=1e3,energy=1000.,\
 
             #Go to focus
             try:
-                surf.flat(rays)
+                surf.focusI(rays,weights=weights)
             except:
                 pdb.set_trace()
 
@@ -209,5 +209,22 @@ def traceXRS(smax,pmin,fun,L=200.,nodegap=25.,Nshell=1e3,energy=1000.,\
                 mrays = rays
                 mweights = weights
 
-    return mrays,mweights
+    if rrays is True:
+        return mrays,mweights
 
+    return anal.hpd(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
+           anal.rmsCentroid(mrays,weights=mweights)/1e4*180/np.pi*60**2
+
+"""
+Factors to consider for this project:
+- Impact on off-axis resolution
+- Impact on inherent area due to increased graze angle, does this
+impact aperture diffraction significantly?
+- Mirror thickness needs to be added
+- Impact on reflectivity due to increased graze angle on one of the mirrors
+
+What to report?
+Weighted Diffraction limit - just use analytic equations
+Effective area, HPD, RMSD vs. off-axis angle
+Need to compare with nominal Rx with varying mirror axial heights
+"""
