@@ -484,9 +484,9 @@ subroutine torus(x,y,z,l,m,n,ux,uy,uz,num,rin,rout)
       Fz = 4*(rout+rin+z(i))*(2*rin*(rout+z(i)) + 2*rout*z(i)+z(i)**2+y(i)**2+x(i)**2)
       Fp = Fx*l(i) + Fy*m(i) + Fz*n(i)
       delt = -F/Fp
-      !print *, x(i),y(i),z(i)
-      !print *, F, Fp
-      !print * ,delt
+      print *, x(i),y(i),z(i)
+      print *, F, Fp
+      print * ,delt
       !read *, dum
       x(i) = x(i) + l(i)*delt
       y(i) = y(i) + m(i)*delt

@@ -522,15 +522,11 @@ subroutine spoCone(x,y,z,l,m,n,ux,uy,uz,num,R0,tg)
   integer, intent(in) :: num
   real*8 , intent(inout) :: x(num),y(num),z(num),l(num),m(num),n(num),ux(num),uy(num),uz(num)
   real*8, intent(in) :: R0,tg
-!  real*8 :: k,kterm,dbdx,dbdy,dbdz,dadb,beta,betas,ff,g,d,a
-!  real*8 :: gam,dbdzs,dadbs
-!  real*8 :: F,Fx,Fy,Fz,Fp,delt,dum,Fb
   integer :: i
   real*8 :: A,B,C,sl,det,t1,t2
 
   !Loop through rays and trace to mirror
   sl = tan(tg)
-  !$omp parallel do private(i,A,B,C,det,t1,t2)
   do i=1,num
     !Solve quadratic equation for ray advancement distance
     A = n(i)**2*sl**2 - m(i)**2 - l(i)**2
@@ -556,12 +552,7 @@ subroutine spoCone(x,y,z,l,m,n,ux,uy,uz,num,R0,tg)
       m(i) = 0.
       n(i) = 0.
     end if
-    !print *, x(i),y(i),z(i)
-    !print *, ux(i),uy(i),uz(i)
-    !print *, F, Fx, Fy, Fz
-    !read *, dum
   end do
-  !$omp end parallel do
 
 end subroutine spoCone
 
