@@ -46,7 +46,9 @@ def hpd(rays,weights=None):
         weights = weights[ind]
         rho = rho[ind]
         cdf = np.cumsum(weights)
-        hpd = rho[np.argmin(np.abs(cdf-.5))] * 2.
+        cdf = cdf / cdf.max()
+        hpd = rho[np.argmin(np.abs(cdf-.75))] - \
+              rho[np.argmin(np.abs(cdf-.25))]
     else:
         hpd = np.median(rho)*2.
     return hpd
@@ -63,7 +65,9 @@ def hpdY(rays,weights=None):
         weights = weights[ind]
         rho = rho[ind]
         cdf = np.cumsum(weights)
-        hpd = rho[np.argmin(np.abs(cdf-.5))] * 2.
+        cdf = cdf / cdf.max()
+        hpd = rho[np.argmin(np.abs(cdf-.75))] - \
+              rho[np.argmin(np.abs(cdf-.25))]
     else:
         hpd = np.median(rho)*2.
     return hpd
