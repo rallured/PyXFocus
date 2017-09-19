@@ -14,6 +14,28 @@ import inducedPolarization as pol
 
 cons = pol.readNK('/home/rallured/Dropbox/inducedPol/Ir_llnl_cxro.nk')
 
+def showZetaEffect(zeta=1.,col='b'):
+    """
+    Trace zeta > 1 and zeta < 1 for a single shell.
+    Demonstrate that zeta > 1 causes rays to spread out
+    thus needing a longer secondary
+    """
+    #Set up source
+    rays = sources.annulus(220.,221.,10000)
+    rays[6] = rays[6]*-1
+    tran.transform(rays,0,0,-8400.,0,0,0)
+
+    #Set up figure
+    plt.figure('ZetaEffect')
+
+    #Trace
+    surf.wolterprimary(rays,220.,8400.,psi=zeta)
+    plt.plot(np.sqrt(rays[1]**2+rays[2]**2),rays[3],col+'.')
+    tran.reflect(rays)
+    surf.woltersecondary(rays,220.,8400.,psi=zeta)
+    plt.plot(np.sqrt(rays[1]**2+rays[2]**2),rays[3],col+'.')
+    
+
 def traceZeta(pmin,R0=220.,Z0=1e4,psi=1.,offaxis=0.,L=100.,az=100.):
     """
     Set initial aperture based on height of bottom of mirror
