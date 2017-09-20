@@ -36,7 +36,7 @@ def showZetaEffect(zeta=1.,col='b'):
     plt.plot(np.sqrt(rays[1]**2+rays[2]**2),rays[3],col+'.')
     
 
-def traceZeta(pmin,R0=220.,Z0=1e4,psi=1.,offaxis=0.,L=100.,az=100.):
+def traceZeta(pmin,R0=220.,Z0=1e4,psi=1.,offaxis=0.,L=200.,az=100.):
     """
     Set initial aperture based on height of bottom of mirror
     above node (pmin). Assume 100 mm long mirrors.
@@ -48,7 +48,7 @@ def traceZeta(pmin,R0=220.,Z0=1e4,psi=1.,offaxis=0.,L=100.,az=100.):
     #Set up aperture
     a0 = conic.primrad(pmin,R0,Z0)
     a1 = conic.primrad(pmin+L,R0,Z0) 
-    rays = sources.subannulus(a0,a1,az/220,1e4)
+    rays = sources.subannulus(a0,a1,az/R0,1e4)
     tran.transform(rays,0,0,-Z0,0,0,0)
 
     #Trace to primary and add off-axis angle
@@ -90,7 +90,7 @@ def onaxisMerit(pmin,smax,R0=220.,Z0=1e4,L=200.,psi=1.):
     surf.wsSecondary(rays,R0,Z0,psi)
 
     #Determine fraction of rays vignetted
-    return np.sum(np.logical_or(rays[3]<smax-L,rays[3]>smax))
+    return np.sum(np.logical_or(rays[3]<smax-L,rays[3]>smax)),np.mean(rays[3])
     
 def determineZeta(pmin,smax,R0=220.,Z0=1e4,L=200.):
     """
@@ -100,10 +100,9 @@ def determineZeta(pmin,smax,R0=220.,Z0=1e4,L=200.):
     """
     prange = np.linspace(.1,1.,100)
     v = np.array([onaxisMerit(pmin,smax,R0=R0,Z0=Z0,L=L,psi=p) for p in prange])
-    try:
-        return max(prange[v==0.]),0.
-    except:
-        return prange[np.argmin(v)],v.min()/1e3
+    com = np.polyval(np.polyfit(prange,v[:,1],2),prange)
+    ind = np.argmin(np.abs(com-(smax-L/2)))
+    return prange[ind],v[ind,0]
 
 def defineRx(N=3,L=200.,nodegap=25.,rnodes=False):
     """
@@ -126,10 +125,16 @@ def defineRx(N=3,L=200.,nodegap=25.,rnodes=False):
     pminu = []
     for i in range(N):
         ind = np.logical_and(rad>=200.+(1300./N)*i,rad<=200.+(1300./N)*(i+1))
-        smax[ind] = np.min(z[ind])-nodegap
-        pmin[ind] = 2*np.max(z[ind])-smax[ind]
-        smaxu.append(np.min(z[ind])-nodegap)
-        pminu.append(2*np.max(z[ind])-smaxu[i])
+        zm = np.max(z[ind])
+        zmin = np.min(z[ind])
+        if 2*(zm-zmin) > nodegap:
+            print 'Invalid nodegap in section ' + str(i+1)
+            nodegap = 2*(zm-zmin)
+            print 'Increased to ' + str(nodegap)
+        smax[ind] = zm-nodegap/2.
+        pmin[ind] = zm+nodegap/2.
+        smaxu.append(zm-nodegap/2.)
+        pminu.append(zm+nodegap/2.)
 
     #Determine proper zeta for each node
     zeta = np.array([determineZeta(pmin[i],smax[i],R0=rad[i],Z0=z[i],L=L) \
@@ -167,7 +172,7 @@ def traceXRS(smax,pmin,fun,L=200.,nodegap=25.,Nshell=1e3,energy=1000.,\
         rad = np.array([])
         rout = 0.
         #Compute shell gap
-        gap = (pmin[sec]+L-1e4)*3e-3+0.4 #4 mm glass thickness plus vignetting
+        gap = (pmin[sec]+L-1e4)*3e-3+0.4 #.4 mm glass thickness plus vignetting
         #First node position
         rad = np.append(rad,200.+(1300./N)*sec)
         rout = conic.primrad(pmin[sec]+L,rad[-1],\
