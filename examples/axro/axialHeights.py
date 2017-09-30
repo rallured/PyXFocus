@@ -98,13 +98,14 @@ def determineZeta(pmin,smax,R0=220.,Z0=1e4,L=200.):
     axial position.
     This will be maximum zeta such that the vignetting is zero
     """
-    prange = np.linspace(.1,1.,100)
+    prange = np.linspace(.01,1.,100)
     v = np.array([onaxisMerit(pmin,smax,R0=R0,Z0=Z0,L=L,psi=p) for p in prange])
     com = np.polyval(np.polyfit(prange,v[:,1],2),prange)
     ind = np.argmin(np.abs(com-(smax-L/2)))
-    return prange[ind],v[ind,0]
+    return prange[ind]#,v[ind,0]
 
-def defineRx(N=3,L=200.,nodegap=25.,rnodes=False):
+def defineRx(N=3,L=200.,nodegap=25.,rnodes=False,rzeta=False,\
+             zeta=None,smaxu=None,pminu=None,snodegap=None,rad=None):
     """
     Determine node radii and axial positions
     Divide nodes into N sections.
@@ -114,48 +115,133 @@ def defineRx(N=3,L=200.,nodegap=25.,rnodes=False):
     and determine weighted resolution and effective area.
     Determine off-axis resolution and effective area including vignetting.
     """
-    #Determine node positions
-    rad = np.arange(200.,1501.,2.)
-    z = np.sqrt(1e4**2-rad**2)
+    if zeta is None:
+        #Determine node positions
+        rad = np.arange(200.,1501.,5.)
+        z = np.sqrt(1e4**2-rad**2)
 
-    #Split into N sections and determine pmin and smax
-    smax = np.zeros(len(rad))
-    pmin = np.zeros(len(rad))
-    smaxu = []
-    pminu = []
-    for i in range(N):
-        ind = np.logical_and(rad>=200.+(1300./N)*i,rad<=200.+(1300./N)*(i+1))
-        zm = np.max(z[ind])
-        zmin = np.min(z[ind])
-        if 2*(zm-zmin) > nodegap:
-            print 'Invalid nodegap in section ' + str(i+1)
-            nodegap = 2*(zm-zmin)
-            print 'Increased to ' + str(nodegap)
-        smax[ind] = zm-nodegap/2.
-        pmin[ind] = zm+nodegap/2.
-        smaxu.append(zm-nodegap/2.)
-        pminu.append(zm+nodegap/2.)
+        #Split into N sections and determine pmin and smax
+        smax = np.zeros(len(rad))
+        pmin = np.zeros(len(rad))
+        smaxu = []
+        pminu = []
+        snodegap = []
+        for i in range(N):
+            ind = np.logical_and(rad>=200.+(1300./N)*i,rad<=200.+(1300./N)*(i+1))
+            zm = np.max(z[ind])
+            zmin = np.min(z[ind])
+            if 2*(zm-zmin) > nodegap:
+                print 'Invalid nodegap in section ' + str(i+1)
+                nodegap = 2*(zm-zmin)
+                print 'Increased to ' + str(nodegap)
+            smax[ind] = zm-nodegap/2.
+            pmin[ind] = zm+nodegap/2.
+            smaxu.append(zm-nodegap/2.)
+            pminu.append(zm+nodegap/2.)
+            snodegap.append(nodegap)
 
-    #Determine proper zeta for each node
-    zeta = np.array([determineZeta(pmin[i],smax[i],R0=rad[i],Z0=z[i],L=L) \
-            for i in range(len(rad))])
+        #Determine proper zeta for each node
+        zeta = np.array([determineZeta(pmin[i],smax[i],R0=rad[i],Z0=z[i],L=L) \
+                for i in range(len(rad))])
 
+        if rzeta is True:
+            return rad,zeta,smaxu,pminu,snodegap
+
+    #Switch this to a quadratic function fit
     #Create an interpolation function for zeta for each section
     fun = []
     for i in range(N):
         ind = np.logical_and(rad>=200.+(1300./N)*i,rad<=200.+(1300./N)*(i+1))
-        fun.append(inte.interp1d(rad[ind],np.transpose(zeta)[0][ind],\
-                                 kind='linear',bounds_error=False,\
-                                 fill_value="extrapolate"))
+##        fun.append(inte.interp1d(rad[ind],zeta[ind],\
+##                                 kind='linear',bounds_error=False,\
+##                                 fill_value="extrapolate"))
+        fit = np.polyfit(rad[ind],zeta[ind],2)
+        fun.append(fit)
 
     if rnodes is True:
-        return smax,pmin,np.transpose(zeta)[0],np.transpose(zeta)[1]
+        return smax,pmin,zeta
 
-    return smaxu,pminu,fun
+    return smaxu,pminu,fun,snodegap
 
+def tracePerfectXRS(L=200.,nodegap=50.,Nshell=1e3,energy=1000.,\
+                    rough=1.,offaxis=0.,rrays=False,rnodes=False):
+    """
+    Trace rays through a perfect Lynx design where all the shells
+    are on the spherical principle surface, with zeta equal to unity.
+    """
+    #Construct node positions
+    rad = np.array([200.])
+    z = np.sqrt(1e4**2-rad[-1]**2)
+    #Gap is projected radial shell plus thickness plus vignetting gap
+    rout = np.array([conic.primrad(z+L+nodegap/2.,rad[-1],z)])
+    gap = L*3e-3 + 0.4
+    while rout[-1]<1500.:
+        rad = np.append(rad,rout[-1]+gap)
+        z = np.sqrt(1e4**2-rad[-1]**2)
+        rout = np.append(rout,conic.primrad(z+L+nodegap/2.,rad[-1],z))
+        gap = L*3e-3 + 0.4
 
+    if rnodes is True:
+        return rad,rout
 
-def traceXRS(smax,pmin,fun,L=200.,nodegap=25.,Nshell=1e3,energy=1000.,\
+    #Use radial nodes and trace Lynx, keeping track of effective area
+    for r in rad:
+        #Set up aperture
+        z = np.sqrt(1e4**2-r**2)
+        a0 = conic.primrad(z+nodegap/2.,r,z)
+        a1 = conic.primrad(z+nodegap/2.+L,r,z) 
+        rays = sources.annulus(a0,a1,Nshell)
+        tran.transform(rays,0,0,-z,0,0,0)
+
+        #Set up weights (cm^2)
+        weights = np.repeat((a1**2-a0**2) * np.pi / 100. / Nshell,Nshell)
+
+        #Trace to primary
+        surf.wsPrimary(rays,r,z,1.)
+        rays[4] = rays[4]+np.sin(offaxis)
+        rays[6] = -np.sqrt(1.-rays[4]**2)
+        tran.reflect(rays)
+        ang = anal.grazeAngle(rays)
+        weights = weights*\
+                  pol.computeReflectivities(ang,energy,rough,1,cons)[0]
+
+        #Trace to secondary
+        surf.wsSecondary(rays,r,z,1.)
+        tran.reflect(rays)
+        ang = anal.grazeAngle(rays)
+        weights = weights*\
+                  pol.computeReflectivities(ang,energy,rough,1,cons)[0]
+
+        #Handle vignetting
+        ind = np.logical_and(rays[3]>z-nodegap/2.-L,rays[3]<z-nodegap/2.)
+        if sum(ind) == 0:
+            pdb.set_trace()
+        rays = tran.vignette(rays,ind=ind)
+        weights = weights[ind]
+
+        #Go to focus
+        try:
+            surf.focusI(rays,weights=weights)
+        except:
+            pdb.set_trace()
+
+        #Accumulate master rays
+        try:
+            mrays = [np.concatenate([mrays[ti],rays[ti]]) for ti in range(10)]
+            mweights = np.concatenate([mweights,weights])
+        except:
+            mrays = rays
+            mweights = weights
+
+    if rrays is True:
+        return mrays,mweights
+
+    return anal.hpd(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
+           anal.rmsCentroid(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
+           np.sum(mweights)
+        
+
+def traceXRS(smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
              rough=1.,offaxis=0.,rrays=False):
     """
     Using output from defineRx, trace the nodes in a Lynx design.
@@ -172,9 +258,10 @@ def traceXRS(smax,pmin,fun,L=200.,nodegap=25.,Nshell=1e3,energy=1000.,\
         rad = np.array([])
         rout = 0.
         #Compute shell gap
-        gap = (pmin[sec]+L-1e4)*3e-3+0.4 #.4 mm glass thickness plus vignetting
+        gap = L*3e-3+0.4 #.4 mm glass thickness plus vignetting
         #First node position
         rad = np.append(rad,200.+(1300./N)*sec)
+        z = np.sqrt(1e4**2-rad[-1]**2)
         rout = conic.primrad(pmin[sec]+L,rad[-1],\
                              np.sqrt(1e4**2-rad[-1]**2))
         while rout+gap < 200.+(1300./N)*(sec+1):
@@ -187,19 +274,24 @@ def traceXRS(smax,pmin,fun,L=200.,nodegap=25.,Nshell=1e3,energy=1000.,\
     #Trace through all shells, computing reflectivity and geometric area
     #for each shell
     for i in range(N):
+        #Variable to store radial position of bottom of previous
+        #secondary mirror
+        previousrho = 0.
         for r in rsec[i]:
+            #Determine zeta for this shell...must be at least .01
+            psi = np.polyval(fun[i],r)
+            psi = np.max([.01,psi])
             #Set up aperture
             z = np.sqrt(1e4**2-r**2)
-            a0 = conic.primrad(pmin[i],r,z)
-            a1 = conic.primrad(pmin[i]+L,r,z) 
+            a0 = conic.primrad(pmin[i],r,z,psi=psi)
+            a1 = conic.primrad(pmin[i]+L,r,z,psi=psi) 
             rays = sources.annulus(a0,a1,Nshell)
             tran.transform(rays,0,0,-z,0,0,0)
 
-            #Set up weights
+            #Set up weights (cm^2)
             weights = np.repeat((a1**2-a0**2) * np.pi / 100. / Nshell,Nshell)
 
             #Trace to primary
-            psi = fun[i](r)
             surf.wsPrimary(rays,r,z,psi)
             rays[4] = rays[4]+np.sin(offaxis)
             rays[6] = -np.sqrt(1.-rays[4]**2)
@@ -222,6 +314,17 @@ def traceXRS(smax,pmin,fun,L=200.,nodegap=25.,Nshell=1e3,energy=1000.,\
             rays = tran.vignette(rays,ind=ind)
             weights = weights[ind]
 
+            #Go to exit aperture and confirm rays don't
+            #hit back of previous shell
+            tran.transform(rays,0,0,smax[i]-L,0,0,0)
+            surf.flat(rays)
+            rho = np.sqrt(rays[1]**2+rays[2]**2)
+            ind = rho > previousrho
+            rays = tran.vignette(rays,ind=ind)
+            weights = weights[ind]
+            previousrho = conic.secrad(smax[i]-L,r,z,psi=psi)+0.4
+            
+
             #Go to focus
             try:
                 surf.focusI(rays,weights=weights)
@@ -240,7 +343,8 @@ def traceXRS(smax,pmin,fun,L=200.,nodegap=25.,Nshell=1e3,energy=1000.,\
         return mrays,mweights
 
     return anal.hpd(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
-           anal.rmsCentroid(mrays,weights=mweights)/1e4*180/np.pi*60**2
+           anal.rmsCentroid(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
+           np.sum(mweights)
 
 """
 Factors to consider for this project:
