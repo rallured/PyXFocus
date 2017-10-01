@@ -34,7 +34,32 @@ def showZetaEffect(zeta=1.,col='b'):
     tran.reflect(rays)
     surf.woltersecondary(rays,220.,8400.,psi=zeta)
     plt.plot(np.sqrt(rays[1]**2+rays[2]**2),rays[3],col+'.')
-    
+
+def wsPrimrad(z,r0,z0,psi=1.):
+    """
+    Determine radius of WS primary
+    """
+    #Set up ray
+    ray = sources.pointsource(0.,1)
+    tran.transform(ray,0,0,0,0,-np.pi/2,0)
+    tran.transform(ray,-r0-2.,0,-z,0,0,0)
+
+    surf.wsPrimary(ray,r0,z0,psi)
+
+    return ray[1][0]
+
+def wsSecrad(z,r0,z0,psi=1.):
+    """
+    Determine radius of WS primary
+    """
+    #Set up ray
+    ray = sources.pointsource(0.,1)
+    tran.transform(ray,0,0,0,0,-np.pi/2,0)
+    tran.transform(ray,-r0-2.,0,-z,0,0,0)
+
+    surf.wsSecondary(ray,r0,z0,psi)
+
+    return ray[1][0]
 
 def traceZeta(pmin,R0=220.,Z0=1e4,psi=1.,offaxis=0.,L=200.,az=100.):
     """
@@ -46,8 +71,8 @@ def traceZeta(pmin,R0=220.,Z0=1e4,psi=1.,offaxis=0.,L=200.,az=100.):
     RMS and HPD vs angle.
     """
     #Set up aperture
-    a0 = conic.primrad(pmin,R0,Z0)
-    a1 = conic.primrad(pmin+L,R0,Z0) 
+    a0 = wsPrimrad(pmin,R0,Z0)
+    a1 = wsPrimrad(pmin+L,R0,Z0) 
     rays = sources.subannulus(a0,a1,az/R0,1e4)
     tran.transform(rays,0,0,-Z0,0,0,0)
 
@@ -77,8 +102,8 @@ def onaxisMerit(pmin,smax,R0=220.,Z0=1e4,L=200.,psi=1.):
     Trace rays for a given shell and determine amount of rays vignetted
     """
     #Set up aperture
-    a0 = conic.primrad(pmin,R0,Z0)
-    a1 = conic.primrad(pmin+L,R0,Z0) 
+    a0 = wsPrimrad(pmin,R0,Z0)
+    a1 = wsPrimrad(pmin+L,R0,Z0)
     rays = sources.annulus(a0,a1,1e3)
     tran.transform(rays,0,0,-Z0,0,0,0)
 
@@ -90,7 +115,10 @@ def onaxisMerit(pmin,smax,R0=220.,Z0=1e4,L=200.,psi=1.):
     surf.wsSecondary(rays,R0,Z0,psi)
 
     #Determine fraction of rays vignetted
-    return np.sum(np.logical_or(rays[3]<smax-L,rays[3]>smax)),np.mean(rays[3])
+    try:
+        return np.sum(np.logical_or(rays[3]<smax-L,rays[3]>smax)),np.mean(rays[3])
+    except:
+        pdb.set_trace()
     
 def determineZeta(pmin,smax,R0=220.,Z0=1e4,L=200.):
     """
@@ -102,6 +130,7 @@ def determineZeta(pmin,smax,R0=220.,Z0=1e4,L=200.):
     v = np.array([onaxisMerit(pmin,smax,R0=R0,Z0=Z0,L=L,psi=p) for p in prange])
     com = np.polyval(np.polyfit(prange,v[:,1],2),prange)
     ind = np.argmin(np.abs(com-(smax-L/2)))
+    print R0
     return prange[ind]#,v[ind,0]
 
 def defineRx(N=3,L=200.,nodegap=25.,rnodes=False,rzeta=False,\
@@ -141,8 +170,11 @@ def defineRx(N=3,L=200.,nodegap=25.,rnodes=False,rzeta=False,\
             snodegap.append(nodegap)
 
         #Determine proper zeta for each node
-        zeta = np.array([determineZeta(pmin[i],smax[i],R0=rad[i],Z0=z[i],L=L) \
+        try:
+            zeta = np.array([determineZeta(pmin[i],smax[i],R0=rad[i],Z0=z[i],L=L) \
                 for i in range(len(rad))])
+        except:
+            pdb.set_trace()
 
         if rzeta is True:
             return rad,zeta,smaxu,pminu,snodegap
@@ -163,6 +195,7 @@ def defineRx(N=3,L=200.,nodegap=25.,rnodes=False,rzeta=False,\
 
     return smaxu,pminu,fun,snodegap
 
+
 def tracePerfectXRS(L=200.,nodegap=50.,Nshell=1e3,energy=1000.,\
                     rough=1.,offaxis=0.,rrays=False,rnodes=False):
     """
@@ -173,12 +206,12 @@ def tracePerfectXRS(L=200.,nodegap=50.,Nshell=1e3,energy=1000.,\
     rad = np.array([200.])
     z = np.sqrt(1e4**2-rad[-1]**2)
     #Gap is projected radial shell plus thickness plus vignetting gap
-    rout = np.array([conic.primrad(z+L+nodegap/2.,rad[-1],z)])
+    rout = np.array([wsPrimrad(z+L+nodegap/2.,rad[-1],z)])
     gap = L*3e-3 + 0.4
     while rout[-1]<1500.:
         rad = np.append(rad,rout[-1]+gap)
         z = np.sqrt(1e4**2-rad[-1]**2)
-        rout = np.append(rout,conic.primrad(z+L+nodegap/2.,rad[-1],z))
+        rout = np.append(rout,wsPrimrad(z+L+nodegap/2.,rad[-1],z))
         gap = L*3e-3 + 0.4
 
     if rnodes is True:
@@ -188,8 +221,8 @@ def tracePerfectXRS(L=200.,nodegap=50.,Nshell=1e3,energy=1000.,\
     for r in rad:
         #Set up aperture
         z = np.sqrt(1e4**2-r**2)
-        a0 = conic.primrad(z+nodegap/2.,r,z)
-        a1 = conic.primrad(z+nodegap/2.+L,r,z) 
+        a0 = wsPrimrad(z+nodegap/2.,r,z)
+        a1 = wsPrimrad(z+nodegap/2.+L,r,z) 
         rays = sources.annulus(a0,a1,Nshell)
         tran.transform(rays,0,0,-z,0,0,0)
 
@@ -239,7 +272,15 @@ def tracePerfectXRS(L=200.,nodegap=50.,Nshell=1e3,energy=1000.,\
     return anal.hpd(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
            anal.rmsCentroid(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
            np.sum(mweights)
-        
+
+def findNextNode():
+    """
+    Use iterative approach to find the next node position.
+    Use first guess as extension of ray from focus, passing
+    outer edge of previous mirror plus vignetting gap, to
+    smax. Then 
+    """
+    return None
 
 def traceXRS(smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
              rough=1.,offaxis=0.,rrays=False):
@@ -262,11 +303,15 @@ def traceXRS(smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
         #First node position
         rad = np.append(rad,200.+(1300./N)*sec)
         z = np.sqrt(1e4**2-rad[-1]**2)
-        rout = conic.primrad(pmin[sec]+L,rad[-1],\
+        rout = wsPrimrad(pmin[sec]+L,rad[-1],\
                              np.sqrt(1e4**2-rad[-1]**2))
+        #Find next r_smax - start here
+        #rsmin = wsSecrad(smax[sec]-L,rad,z,np.polyval(fun[sec],rad))+.4+gap
+        #rout0 = np.arctan(rsmin/smax[sec]-L)*smax[sec]
+        #rguess = np.linspace(
         while rout+gap < 200.+(1300./N)*(sec+1):
             rad = np.append(rad,rout+gap)
-            rout = conic.primrad(pmin[sec]+L,rad[-1],\
+            rout = wsPrimrad(pmin[sec]+L,rad[-1],\
                                  np.sqrt(1e4**2-rad[-1]**2))
         #Add to list of node positions
         rsec.append(rad)
@@ -283,8 +328,8 @@ def traceXRS(smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
             psi = np.max([.01,psi])
             #Set up aperture
             z = np.sqrt(1e4**2-r**2)
-            a0 = conic.primrad(pmin[i],r,z,psi=psi)
-            a1 = conic.primrad(pmin[i]+L,r,z,psi=psi) 
+            a0 = wsPrimrad(pmin[i],r,z,psi=psi)
+            a1 = wsPrimrad(pmin[i]+L,r,z,psi=psi) 
             rays = sources.annulus(a0,a1,Nshell)
             tran.transform(rays,0,0,-z,0,0,0)
 
@@ -320,16 +365,14 @@ def traceXRS(smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
             surf.flat(rays)
             rho = np.sqrt(rays[1]**2+rays[2]**2)
             ind = rho > previousrho
-            rays = tran.vignette(rays,ind=ind)
-            weights = weights[ind]
-            previousrho = conic.secrad(smax[i]-L,r,z,psi=psi)+0.4
-            
-
-            #Go to focus
-            try:
-                surf.focusI(rays,weights=weights)
-            except:
+            if np.sum(ind)==0:
                 pdb.set_trace()
+            if np.sum(~ind) > 0:
+                print '%i rays hit back of shell' % np.sum(~ind)
+                pdb.set_trace()
+            #rays = tran.vignette(rays,ind=ind)
+            #weights = weights[ind]
+            previousrho = wsSecrad(smax[i]-L,r,z,psi=psi)+0.4
 
             #Accumulate master rays
             try:
@@ -341,6 +384,12 @@ def traceXRS(smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
 
     if rrays is True:
         return mrays,mweights
+
+    #Go to focus
+    try:
+        surf.focusI(rays,weights=weights)
+    except:
+        pdb.set_trace()
 
     return anal.hpd(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
            anal.rmsCentroid(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
