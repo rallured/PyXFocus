@@ -3,6 +3,9 @@ import transformationsf as tran
 import transformMod as tr
 import pdb
 
+def copy_rays(rays):
+    return [rays[i].copy() for i in range(len(rays))]
+
 def transform(rays,dx,dy,dz,rx,ry,rz,ind=None,coords=None):
     """Coordinate transformation. translations are done first,
     then Rx,Ry,Rz
@@ -159,7 +162,7 @@ def vignette(rays,ind=None):
     """
     opd,x,y,z,l,m,n,ux,uy,uz = rays
     
-    if ind == None:
+    if ind is None:
         mag = l**2+m**2+n**2
         ind = np.where(mag>.1) #Automatic vignetting
                         #requires position vector set to 0.
