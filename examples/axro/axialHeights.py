@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pdb
+import pdb,time
 import scipy.interpolate as inte
 import astropy.io.fits as pyfits
+import scipy.optimize as opt
 
 import PyXFocus.surfaces as surf
 import PyXFocus.transformations as tran
@@ -273,16 +274,88 @@ def tracePerfectXRS(L=200.,nodegap=50.,Nshell=1e3,energy=1000.,\
            anal.rmsCentroid(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
            np.sum(mweights)
 
-def findNextNode():
+def traceSingleRay(rtrace,zexit,R0,Z0,zeta):
     """
-    Use iterative approach to find the next node position.
-    Use first guess as extension of ray from focus, passing
-    outer edge of previous mirror plus vignetting gap, to
-    smax. Then 
+    Trace single ray through WS shell and return
+    ray at a given exit aperture z position
     """
-    return None
+    #Set up ray
+    ray = sources.pointsource(0.,1)
+    ray[6] = -ray[6]
+    ray[1][0] = rtrace
+    tran.transform(ray,0,0,-Z0,0,0,0)
 
-def traceXRS(smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
+    #Trace to shell
+    surf.wsPrimary(ray,R0,Z0,zeta)
+    tran.reflect(ray)
+    surf.wsSecondary(ray,R0,Z0,zeta)
+    tran.reflect(ray)
+
+    #Go to exit aperture
+    tran.transform(ray,0,0,zexit,0,0,0)
+    surf.flat(ray)
+    
+    return ray
+
+def findNextNode(rsmindesired,rguess,smax,pmin,fun,L=200.):
+    """
+    Use numerical approach to find position of next node
+    Given pmin and smax, algorithm will trace extreme ray
+    and adjust node radius until it converges to desired
+    radius rsmindesired.
+    """
+    #Set up optimization function - this might not be behaving
+    rsminout = lambda r: np.abs(rsmindesired - \
+                    traceSingleRay(wsPrimrad(pmin,r,np.sqrt(1e4**2-r**2),\
+                                                  psi=np.polyval(fun,r)),\
+                                        smax-L,r,np.sqrt(1e4**2-r**2),\
+                                        np.max([np.polyval(fun,r),.01]))[1][0])
+    #Optimize node radius
+    res = opt.minimize(rsminout,rguess,method='Nelder-Mead')
+
+    return res['x'][0],res['nfev']
+
+
+def defineNodePositions(smax,pmin,fun,nodegap,L=200.):
+    """
+    Loop through sections and determine optimal placement
+    of nodes in order to prevent vignetting/collisions
+    """
+    #Loop through sections and construct node positions
+    N = len(smax)
+    rsec = []
+    gap = L*3e-3+0.4 #.4 mm glass thickness plus vignetting
+    for sec in range(N):
+        #Establish radius vector
+        rad = np.array([])
+        rout = 0.
+        #First node position
+        rad = np.append(rad,200.+(1300./N)*sec)
+        z = np.sqrt(1e4**2-rad[-1]**2)
+        rout = wsPrimrad(pmin[sec]+L,rad[-1],\
+                             np.sqrt(1e4**2-rad[-1]**2))
+        #Find next r_smax - start here
+        #rguess = np.linspace(
+        while rout+gap < 200.+(1300./N)*(sec+1):
+            #Compute next node radius
+            rsmin = wsSecrad(smax[sec]-L,rad[-1],z,\
+                             psi=np.polyval(fun[sec],rad[-1]))+gap
+            tstart = time.time()
+            nrad,fev = findNextNode(rsmin,rad[-1],\
+                                    smax[sec],pmin[sec],fun[sec],L=L)
+            print 'Optimization time: %f' % (time.time()-tstart)
+            print 'fev: %i' % fev
+            rad = np.append(rad,nrad)#rout+gap)
+            rout = wsPrimrad(pmin[sec]+L,rad[-1],\
+                                 np.sqrt(1e4**2-rad[-1]**2),\
+                             psi=np.polyval(fun[sec],rad[-1]))
+            print nrad,rout
+        #Add to list of node positions
+        rsec.append(rad)
+        
+    return rsec
+
+def traceXRS(rsec,smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
              rough=1.,offaxis=0.,rrays=False):
     """
     Using output from defineRx, trace the nodes in a Lynx design.
@@ -291,37 +364,14 @@ def traceXRS(smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
     Calculate node radii iteratively, providing appropriate gaps between
     nodes in order to limit off-axis vignetting.
     """
-    #Loop through sections and construct node positions
-    N = len(smax)
-    rsec = []
-    for sec in range(N):
-        #Establish radius vector
-        rad = np.array([])
-        rout = 0.
-        #Compute shell gap
-        gap = L*3e-3+0.4 #.4 mm glass thickness plus vignetting
-        #First node position
-        rad = np.append(rad,200.+(1300./N)*sec)
-        z = np.sqrt(1e4**2-rad[-1]**2)
-        rout = wsPrimrad(pmin[sec]+L,rad[-1],\
-                             np.sqrt(1e4**2-rad[-1]**2))
-        #Find next r_smax - start here
-        #rsmin = wsSecrad(smax[sec]-L,rad,z,np.polyval(fun[sec],rad))+.4+gap
-        #rout0 = np.arctan(rsmin/smax[sec]-L)*smax[sec]
-        #rguess = np.linspace(
-        while rout+gap < 200.+(1300./N)*(sec+1):
-            rad = np.append(rad,rout+gap)
-            rout = wsPrimrad(pmin[sec]+L,rad[-1],\
-                                 np.sqrt(1e4**2-rad[-1]**2))
-        #Add to list of node positions
-        rsec.append(rad)
-
+    gap = L*3e-3+0.4 #.4 mm glass thickness plus vignetting
     #Trace through all shells, computing reflectivity and geometric area
     #for each shell
-    for i in range(N):
+    previousrho = []
+    for i in range(len(smax)):
         #Variable to store radial position of bottom of previous
         #secondary mirror
-        previousrho = 0.
+        previousrho.append(0.)
         for r in rsec[i]:
             #Determine zeta for this shell...must be at least .01
             psi = np.polyval(fun[i],r)
@@ -364,15 +414,15 @@ def traceXRS(smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
             tran.transform(rays,0,0,smax[i]-L,0,0,0)
             surf.flat(rays)
             rho = np.sqrt(rays[1]**2+rays[2]**2)
-            ind = rho > previousrho
-            if np.sum(ind)==0:
-                pdb.set_trace()
-            if np.sum(~ind) > 0:
+            ind = rho > previousrho[-1]
+            #if np.sum(ind)==0:
+                #pdb.set_trace()
+            if np.sum(~ind) > 100:
                 print '%i rays hit back of shell' % np.sum(~ind)
                 pdb.set_trace()
             #rays = tran.vignette(rays,ind=ind)
             #weights = weights[ind]
-            previousrho = wsSecrad(smax[i]-L,r,z,psi=psi)+0.4
+            previousrho.append(wsSecrad(smax[i]-L,r,z,psi=psi)+gap)
 
             #Accumulate master rays
             try:
@@ -383,7 +433,7 @@ def traceXRS(smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
                 mweights = weights
 
     if rrays is True:
-        return mrays,mweights
+        return mrays,mweights,previousrho
 
     #Go to focus
     try:
