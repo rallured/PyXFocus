@@ -62,7 +62,7 @@ def wsSecrad(z,r0,z0,psi=1.):
 
     return ray[1][0]
 
-def traceZeta(pmin,R0=220.,Z0=1e4,psi=1.,offaxis=0.,L=200.,az=100.):
+def traceZeta(pmin,R0=220.,Z0=1e4,psi=1.,offaxis=0.,L=200.,az=100.,pause=False):
     """
     Set initial aperture based on height of bottom of mirror
     above node (pmin). Assume 100 mm long mirrors.
@@ -72,8 +72,8 @@ def traceZeta(pmin,R0=220.,Z0=1e4,psi=1.,offaxis=0.,L=200.,az=100.):
     RMS and HPD vs angle.
     """
     #Set up aperture
-    a0 = wsPrimrad(pmin,R0,Z0)
-    a1 = wsPrimrad(pmin+L,R0,Z0) 
+    a0 = wsPrimrad(pmin,R0,Z0,psi)
+    a1 = wsPrimrad(pmin+L,R0,Z0,psi) 
     rays = sources.subannulus(a0,a1,az/R0,1e4)
     tran.transform(rays,0,0,-Z0,0,0,0)
 
@@ -88,6 +88,8 @@ def traceZeta(pmin,R0=220.,Z0=1e4,psi=1.,offaxis=0.,L=200.,az=100.):
     tran.reflect(rays)
     smax = np.nanmax(rays[3])
     smin = np.nanmin(rays[3])
+    if pause is True:
+        pdb.set_trace()
 
     #Go to focus
     f = surf.focusI(rays)
@@ -103,8 +105,8 @@ def onaxisMerit(pmin,smax,R0=220.,Z0=1e4,L=200.,psi=1.):
     Trace rays for a given shell and determine amount of rays vignetted
     """
     #Set up aperture
-    a0 = wsPrimrad(pmin,R0,Z0)
-    a1 = wsPrimrad(pmin+L,R0,Z0)
+    a0 = wsPrimrad(pmin,R0,Z0,psi)
+    a1 = wsPrimrad(pmin+L,R0,Z0,psi)
     rays = sources.annulus(a0,a1,1e3)
     tran.transform(rays,0,0,-Z0,0,0,0)
 
@@ -307,7 +309,7 @@ def findNextNode(rsmindesired,rguess,smax,pmin,fun,L=200.):
     #Set up optimization function - this might not be behaving
     rsminout = lambda r: np.abs(rsmindesired - \
                     traceSingleRay(wsPrimrad(pmin,r,np.sqrt(1e4**2-r**2),\
-                                                  psi=np.polyval(fun,r)),\
+                                        psi=np.max([np.polyval(fun,r),.01])),\
                                         smax-L,r,np.sqrt(1e4**2-r**2),\
                                         np.max([np.polyval(fun,r),.01]))[1][0])
     #Optimize node radius
@@ -324,6 +326,7 @@ def defineNodePositions(smax,pmin,fun,nodegap,L=200.):
     #Loop through sections and construct node positions
     N = len(smax)
     rsec = []
+    rext = []
     gap = L*3e-3+0.4 #.4 mm glass thickness plus vignetting
     for sec in range(N):
         #Establish radius vector
@@ -331,29 +334,33 @@ def defineNodePositions(smax,pmin,fun,nodegap,L=200.):
         rout = 0.
         #First node position
         rad = np.append(rad,200.+(1300./N)*sec)
-        z = np.sqrt(1e4**2-rad[-1]**2)
-        rout = wsPrimrad(pmin[sec]+L,rad[-1],\
-                             np.sqrt(1e4**2-rad[-1]**2))
-        #Find next r_smax - start here
         #rguess = np.linspace(
-        while rout+gap < 200.+(1300./N)*(sec+1):
+        while rout+gap < 200.+(1300./N)*(sec+1)-10.: #Need to adjust this condition
+            #Compute parameters for current node
+            z = np.sqrt(1e4**2-rad[-1]**2)
+            psi = np.max([np.polyval(fun[sec],rad[-1]),.01])
             #Compute next node radius
             rsmin = wsSecrad(smax[sec]-L,rad[-1],z,\
-                             psi=np.polyval(fun[sec],rad[-1]))+gap
-            tstart = time.time()
+                             psi=psi)+gap
             nrad,fev = findNextNode(rsmin,rad[-1],\
                                     smax[sec],pmin[sec],fun[sec],L=L)
-            print 'Optimization time: %f' % (time.time()-tstart)
-            print 'fev: %i' % fev
             rad = np.append(rad,nrad)#rout+gap)
             rout = wsPrimrad(pmin[sec]+L,rad[-1],\
                                  np.sqrt(1e4**2-rad[-1]**2),\
-                             psi=np.polyval(fun[sec],rad[-1]))
-            print nrad,rout
+                             psi=np.max([np.polyval(fun[sec],rad[-1]),.01]))
+##            rout2 = wsSecrad(smax[sec]-L,rad[-1],\
+##                                 np.sqrt(1e4**2-rad[-1]**2),\
+##                             psi=np.max([np.polyval(fun[sec],rad[-1]),.01]))
+            #Add to list of extreme ray positions
+##            rext.append(traceSingleRay(rout,smax[sec]-L,rad[-1],\
+##                                       np.sqrt(1e4**2-rad[-1]**2)\
+##                       ,np.max([np.polyval(fun[sec],rad[-1]),\
+##                                                  .01])))
+            #print rad[-1],rout,rout2,rext[-1][1][0]
         #Add to list of node positions
-        rsec.append(rad)
+        rsec.append(rad[:-1])
         
-    return rsec
+    return rsec#,rext
 
 def traceXRS(rsec,smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
              rough=1.,offaxis=0.,rrays=False):
@@ -419,10 +426,16 @@ def traceXRS(rsec,smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
                 #pdb.set_trace()
             if np.sum(~ind) > 100:
                 print '%i rays hit back of shell' % np.sum(~ind)
-                pdb.set_trace()
-            #rays = tran.vignette(rays,ind=ind)
-            #weights = weights[ind]
+                print r,psi
+                #pdb.set_trace()
+            rays = tran.vignette(rays,ind=ind)
+            weights = weights[ind]
             previousrho.append(wsSecrad(smax[i]-L,r,z,psi=psi)+gap)
+
+            #Go to focus
+            if rrays is False:
+                tran.transform(rays,0,0,-smax[i]+L,0,0,0)
+                surf.flat(rays)
 
             #Accumulate master rays
             try:
@@ -431,6 +444,7 @@ def traceXRS(rsec,smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
             except:
                 mrays = rays
                 mweights = weights
+
 
     if rrays is True:
         return mrays,mweights,previousrho
@@ -444,6 +458,73 @@ def traceXRS(rsec,smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
     return anal.hpd(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
            anal.rmsCentroid(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
            np.sum(mweights)
+
+def plotNodeSpacing(rsec,smax,pmin,fun,nodegap,L=200.):
+    """
+    Plot mirror positions and beam extent for each mirror node
+    """
+    plt.figure('Nodes')
+    plt.clf()
+    for i in range(len(smax)):
+        for r in rsec[i]:
+            #Mirror parameters
+            z = np.sqrt(1e4**2-r**2)
+            psi = np.polyval(fun[i],r)
+            psi = np.max([.01,psi])
+            #Plot mirrors
+            rp1 = wsPrimrad(pmin[i]+L,r,z,psi)
+            rp2 = wsPrimrad(pmin[i],r,z,psi)
+            rs1 = wsSecrad(smax[i],r,z,psi)
+            rs2 = wsSecrad(smax[i]-L,r,z,psi)
+            plt.plot([rp1,rp2],[pmin[i]+L,pmin[i]],'k')
+            plt.plot([rs1,rs2],[smax[i],smax[i]-L],'k')
+
+            if np.where(r==rsec[i])[0] == 136:
+                pdb.set_trace()
+            
+            #Plot beam
+            #Set up ray
+            ray = sources.pointsource(0.,1)
+            ray[6] = -ray[6]
+            ray[1][0] = rp1
+            tran.transform(ray,0,0,-1e4,0,0,0)
+
+            #Trace to shell
+            surf.wsPrimary(ray,r,z,psi)
+            tran.reflect(ray)
+            surf.wsSecondary(ray,r,z,psi)
+            tran.reflect(ray)
+            rb1 = ray[1][0]
+            z1 = ray[3][0]
+
+            #Set up ray
+            ray = sources.pointsource(0.,1)
+            ray[6] = -ray[6]
+            ray[1][0] = rp2
+            tran.transform(ray,0,0,-1e4,0,0,0)
+
+            #Trace to shell
+            surf.wsPrimary(ray,r,z,psi)
+            tran.reflect(ray)
+            surf.wsSecondary(ray,r,z,psi)
+            tran.reflect(ray)
+            rb2 = ray[1][0]
+            z2 = ray[3][0]
+
+            plt.plot([rp1,rp1,rb1,0],[1e4+500.,pmin[i]+L,z1,0],'b--')
+            plt.plot([rp2,rp2,rb2,0],[1e4+500.,pmin[i],z2,0],'b--')
+            
+def traceNode(sec,nodeindex,rsec,smax,pmin,fun,nodegap,L=200.):
+    """
+    Trace individual node from prescription.
+    """
+    r = rsec[sec][nodeindex]
+    z = np.sqrt(1e4**2-r**2)
+    psi = np.max([np.polyval(fun[sec],r),.01])
+
+    traceZeta(pmin[sec],R0=r,Z0=z,psi=psi,offaxis=0.,L=200.,az=100.,\
+              pause=True)
+    
 
 """
 Factors to consider for this project:
