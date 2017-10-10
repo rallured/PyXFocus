@@ -1,8 +1,9 @@
 import numpy as np
 
 ###### SOURCES #######
+# All sources are initialized to be 1 keV X-rays (wavelength = 1.24e-6 mm)
 
-def pointsource(ang,num):
+def pointsource(ang,num,wave = 1.24e-6):
     """Define point source with angular divergence
     Points in +z direction
     Ang is half angle
@@ -19,10 +20,10 @@ def pointsource(ang,num):
     ux = np.repeat(0.,num)
     uy = np.repeat(0.,num)
     uz = np.repeat(0.,num)
-    opd = np.repeat(0.,num)
-    return [opd,x,y,z,l,m,n,ux,uy,uz]
+    wave = np.repeat(0.,num)
+    return [wave,x,y,z,l,m,n,ux,uy,uz]
 
-def circularbeam(rad,num):
+def circularbeam(rad,num,wave = 1.24e-6):
     """Define uniform, circular beam of radius rad, pointing in +z direction
     """
     rho = np.sqrt(np.random.rand(num))*rad
@@ -36,10 +37,10 @@ def circularbeam(rad,num):
     ux = np.copy(l)
     uy = np.copy(l)
     uz = np.copy(l)
-    opd = np.copy(l)
-    return [opd,x,y,z,l,m,n,ux,uy,uz]
+    wave = np.copy(l)
+    return [wave,x,y,z,l,m,n,ux,uy,uz]
 
-def annulus(rin,rout,num):
+def annulus(rin,rout,num,wave = 1.24e-6):
     """Define annulus of rays pointing in +z direction
     """
     rho = np.sqrt(rin**2+np.random.rand(num)*(rout**2-rin**2))
@@ -53,10 +54,10 @@ def annulus(rin,rout,num):
     ux = np.copy(l)
     uy = np.copy(l)
     uz = np.copy(l)
-    opd = np.copy(l)
-    return [opd,x,y,z,l,m,n,ux,uy,uz]
+    wave = np.copy(l)
+    return [wave,x,y,z,l,m,n,ux,uy,uz]
 
-def subannulus(rin,rout,dphi,num,zhat=1.):
+def subannulus(rin,rout,dphi,num,zhat=1.,wave = 1.24e-6):
     """Create a subapertured annulus source in +z direction
     Annulus is centered about theta=0 which points to +x
     If negz is set -1, rays will point in -z hat
@@ -72,26 +73,26 @@ def subannulus(rin,rout,dphi,num,zhat=1.):
     ux = np.copy(l)
     uy = np.copy(l)
     uz = np.copy(l)
-    opd = np.copy(l)
-    return [opd,x,y,z,l,m,n,ux,uy,uz]
+    wave = np.copy(l)
+    return [wave,x,y,z,l,m,n,ux,uy,uz]
 
-def rectArray(xsize,ysize,num):
+def rectArray(xsize,ysize,num,wave = 1.24e-6):
     """Creates a regular array of rays using meshgrid and linspace"""
     x,y = np.meshgrid(np.linspace(-xsize,xsize,num),\
                       np.linspace(-ysize,ysize,num))
-    opd = np.repeat(0.,num**2)
+    wave = np.repeat(0.,num**2)
     x = x.flatten()
     y = y.flatten()
-    z = np.copy(opd)
+    z = np.copy(wave)
     l = np.repeat(0.,num**2)
     m = np.repeat(0.,num**2)
     n = np.repeat(1.,num**2)
     ux = np.copy(l)
     uy = np.copy(l)
     uz = np.copy(l)
-    return [opd,x,y,z,l,m,n,ux,uy,uz]
+    return [wave,x,y,z,l,m,n,ux,uy,uz]
 
-def convergingbeam(zset,rin,rout,tmin,tmax,num,lscat):
+def convergingbeam(zset,rin,rout,tmin,tmax,num,lscat,wave = 1.24e-6):
     """Converging sub-apertured annulus beam
     Place at nominal focus
     Input z position, inner and outer radius,
@@ -110,10 +111,10 @@ def convergingbeam(zset,rin,rout,tmin,tmax,num,lscat):
     ux = np.repeat(0.,num)
     uy = np.repeat(0.,num)
     uz = np.repeat(0.,num)
-    opd = np.repeat(0.,num)
-    return [opd,x,y,z,l,m,n,ux,uy,uz]
+    wave = np.repeat(0.,num)
+    return [wave,x,y,z,l,m,n,ux,uy,uz]
 
-def convergingbeam2(zset,xmin,xmax,ymin,ymax,num,lscat):
+def convergingbeam2(zset,xmin,xmax,ymin,ymax,num,lscat,wave = 1.24e-6):
     """Rectangular converging beam
     Place at nominal focus
     Input z position and rectangular bounds
@@ -131,10 +132,10 @@ def convergingbeam2(zset,xmin,xmax,ymin,ymax,num,lscat):
     ux = np.repeat(0.,num)
     uy = np.repeat(0.,num)
     uz = np.repeat(0.,num)
-    opd = np.repeat(0.,num)
-    return [opd,x,y,z,l,m,n,ux,uy,uz]
+    wave = np.repeat(0.,num)
+    return [wave,x,y,z,l,m,n,ux,uy,uz]
 
-def rectbeam(xhalfwidth,yhalfwidth,num):
+def rectbeam(xhalfwidth,yhalfwidth,num,wave = 1.24e-6):
     """Rectangular beam pointing in +z direction
     """
     x = (np.random.rand(num)-.5)*2*xhalfwidth
@@ -146,5 +147,5 @@ def rectbeam(xhalfwidth,yhalfwidth,num):
     ux = np.repeat(0.,num)
     uy = np.repeat(0.,num)
     uz = np.repeat(0.,num)
-    opd = np.repeat(0.,num)
-    return [opd,x,y,z,l,m,n,ux,uy,uz]
+    wave = np.repeat(wave,num)
+    return [wave,x,y,z,l,m,n,ux,uy,uz]

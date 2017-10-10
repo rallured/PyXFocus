@@ -111,12 +111,27 @@ def analyticXPlane(rays,weights=None):
     dz = -bx/ax
     return dz
 
-def grazeAngle(rays,flat=False):
+#def grazeAngle(rays,flat=False):
+#    """Find the graze angle of the rays with the current
+#    surface normal."""
+#    return np.arcsin(rays[4]*rays[7] +\
+#                     rays[5]*rays[8] +\
+#                     rays[6]*rays[9])
+
+def indAngle(rays,ind = None):
+    """Find the incidence angle of the rays with the current
+    surface normal."""
+    if ind is not None:
+        wave,x,y,z,l,m,n,ux,uy,uz = rays
+        tx,ty,tz,tl,tm,tn,tux,tuy,tuz = x[ind],y[ind],z[ind],l[ind],m[ind],n[ind],ux[ind],uy[ind],uz[ind]
+        return np.arccos(tl*tux + tm*tuy + tn*tuz)
+    else:
+        return np.arccos(rays[4]*rays[7] + rays[5]*rays[8] + rays[6]*rays[9])
+
+def grazeAngle(rays,ind = None):
     """Find the graze angle of the rays with the current
     surface normal."""
-    return np.arcsin(rays[4]*rays[7] +\
-                     rays[5]*rays[8] +\
-                     rays[6]*rays[9])
+    return np.pi/2 - indAngle(rays,ind = ind)
 
 def interpolateVec(rays,I,Nx,Ny,xr=None,yr=None,method='linear'):
     """
