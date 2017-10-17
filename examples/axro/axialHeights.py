@@ -15,26 +15,34 @@ import inducedPolarization as pol
 
 cons = pol.readNK('/home/rallured/Dropbox/inducedPol/Ir_llnl_cxro.nk')
 
-def showZetaEffect(zeta=1.,col='b'):
+def showZetaEffect(zeta=1.,col='b',label=''):
     """
     Trace zeta > 1 and zeta < 1 for a single shell.
     Demonstrate that zeta > 1 causes rays to spread out
     thus needing a longer secondary
     """
     #Set up source
-    rays = sources.annulus(220.,221.,10000)
-    rays[6] = rays[6]*-1
-    tran.transform(rays,0,0,-8400.,0,0,0)
+    rp1 = wsPrimrad(1e4+250.,220.,1e4,psi=zeta)
+    rp2 = wsPrimrad(1e4+50.,220.,1e4,psi=zeta)
 
-    #Set up figure
-    plt.figure('ZetaEffect')
+    rs1,zs1 = traceSingleRay(rp1,8000.,220.,1e4,zeta,rpos=True)
+    rs2,zs2 = traceSingleRay(rp2,8000.,220.,1e4,zeta,rpos=True)
 
-    #Trace
-    surf.wolterprimary(rays,220.,8400.,psi=zeta)
-    plt.plot(np.sqrt(rays[1]**2+rays[2]**2),rays[3],col+'.')
-    tran.reflect(rays)
-    surf.woltersecondary(rays,220.,8400.,psi=zeta)
-    plt.plot(np.sqrt(rays[1]**2+rays[2]**2),rays[3],col+'.')
+    plt.figure('Zeta')
+    plt.plot([rp1,rp1],[1e4+500.,1e4+250.],col+'--',linewidth=.5)
+    plt.plot([rp1,rs1],[1e4+250.,zs1],col+'--',linewidth=.5)
+    plt.plot([rp2,rp2],[1e4+500.,1e4+50.],col+'--',linewidth=.5)
+    plt.plot([rp2,rs2],[1e4+50.,zs2],col+'--',linewidth=.5)
+    plt.plot([rs1,0],[zs1,0],col+'--',linewidth=.5)
+    plt.plot([rs2,0],[zs2,0],col+'--',linewidth=.5)
+
+    plt.plot([rp1,rp2],[1e4+250.,1e4+50.],col,label=label,linewidth=3)
+    plt.plot([rs1,rs2],[zs1,zs2],col,linewidth=3)
+
+    plt.xlim([215.,225])
+    plt.ylim([1e4+-300,1e4+500])
+
+    return None 
 
 def wsPrimrad(z,r0,z0,psi=1.):
     """
@@ -129,7 +137,7 @@ def determineZeta(pmin,smax,R0=220.,Z0=1e4,L=200.):
     axial position.
     This will be maximum zeta such that the vignetting is zero
     """
-    prange = np.linspace(.01,1.,100)
+    prange = np.linspace(.01,1.1,100)
     v = np.array([onaxisMerit(pmin,smax,R0=R0,Z0=Z0,L=L,psi=p) for p in prange])
     com = np.polyval(np.polyfit(prange,v[:,1],2),prange)
     ind = np.argmin(np.abs(com-(smax-L/2)))
@@ -159,7 +167,8 @@ def defineRx(N=3,L=200.,nodegap=25.,rnodes=False,rzeta=False,\
         pminu = []
         snodegap = []
         for i in range(N):
-            ind = np.logical_and(rad>=200.+(1300./N)*i,rad<=200.+(1300./N)*(i+1))
+            ind = np.logical_and(rad>=200.+(1300./N)*i,\
+                                 rad<=200.+(1300./N)*(i+1))
             zm = np.max(z[ind])
             zmin = np.min(z[ind])
             if 2*(zm-zmin) > nodegap:
@@ -186,7 +195,7 @@ def defineRx(N=3,L=200.,nodegap=25.,rnodes=False,rzeta=False,\
     #Create an interpolation function for zeta for each section
     fun = []
     for i in range(N):
-        ind = np.logical_and(rad>=200.+(1300./N)*i,rad<=200.+(1300./N)*(i+1))
+        ind = np.logical_and(rad>=200.+(1300./N)*i,rad<200.+(1300./N)*(i+1))
 ##        fun.append(inte.interp1d(rad[ind],zeta[ind],\
 ##                                 kind='linear',bounds_error=False,\
 ##                                 fill_value="extrapolate"))
@@ -209,18 +218,27 @@ def tracePerfectXRS(L=200.,nodegap=50.,Nshell=1e3,energy=1000.,\
     rad = np.array([200.])
     z = np.sqrt(1e4**2-rad[-1]**2)
     #Gap is projected radial shell plus thickness plus vignetting gap
-    rout = np.array([wsPrimrad(z+L+nodegap/2.,rad[-1],z)])
+    rout = wsPrimrad(z+L+nodegap/2.,rad[-1],z)
     gap = L*3e-3 + 0.4
-    while rout[-1]<1500.:
-        rad = np.append(rad,rout[-1]+gap)
-        z = np.sqrt(1e4**2-rad[-1]**2)
-        rout = np.append(rout,wsPrimrad(z+L+nodegap/2.,rad[-1],z))
-        gap = L*3e-3 + 0.4
+    #Establish radius vector
+    rad = np.array([])
+    for sec in range(3):
+        rout = 0.
+        #First node position
+        rad = np.append(rad,200.+(1300./3)*sec)
+        #rguess = np.linspace(
+        while rout+gap < 200.+(1300./3)*(sec+1)-10.: #Need to adjust this condition
+            #Compute parameters for current node
+            z = np.sqrt(1e4**2-rad[-1]**2)
+            rout = wsPrimrad(z+L+nodegap/2.,rad[-1],z)
+            rad = np.append(rad,rout+gap)
+        rad = rad[:-1]
 
     if rnodes is True:
-        return rad,rout
+        return rad
 
     #Use radial nodes and trace Lynx, keeping track of effective area
+    previousrho = 0.
     for r in rad:
         #Set up aperture
         z = np.sqrt(1e4**2-r**2)
@@ -255,6 +273,22 @@ def tracePerfectXRS(L=200.,nodegap=50.,Nshell=1e3,energy=1000.,\
         rays = tran.vignette(rays,ind=ind)
         weights = weights[ind]
 
+        #Go to exit aperture and confirm rays don't - EDIT HERE!
+        #hit back of previous shell
+        tran.transform(rays,0,0,z-nodegap/2-L,0,0,0)
+        surf.flat(rays)
+        rho = np.sqrt(rays[1]**2+rays[2]**2)
+        ind = rho > previousrho
+        #if np.sum(ind)==0:
+            #pdb.set_trace()
+        if np.sum(~ind) > 100:
+            print '%i rays hit back of shell' % np.sum(~ind)
+            print r
+            #pdb.set_trace()
+        rays = tran.vignette(rays,ind=ind)
+        weights = weights[ind]
+        previousrho = wsSecrad(z-nodegap/2-L,r,z)+.4
+
         #Go to focus
         try:
             surf.focusI(rays,weights=weights)
@@ -276,7 +310,7 @@ def tracePerfectXRS(L=200.,nodegap=50.,Nshell=1e3,energy=1000.,\
            anal.rmsCentroid(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
            np.sum(mweights)
 
-def traceSingleRay(rtrace,zexit,R0,Z0,zeta):
+def traceSingleRay(rtrace,zexit,R0,Z0,zeta,rpos=False):
     """
     Trace single ray through WS shell and return
     ray at a given exit aperture z position
@@ -292,6 +326,8 @@ def traceSingleRay(rtrace,zexit,R0,Z0,zeta):
     tran.reflect(ray)
     surf.wsSecondary(ray,R0,Z0,zeta)
     tran.reflect(ray)
+    if rpos is True:
+        return ray[1][0],ray[3][0]
 
     #Go to exit aperture
     tran.transform(ray,0,0,zexit,0,0,0)
@@ -348,15 +384,8 @@ def defineNodePositions(smax,pmin,fun,nodegap,L=200.):
             rout = wsPrimrad(pmin[sec]+L,rad[-1],\
                                  np.sqrt(1e4**2-rad[-1]**2),\
                              psi=np.max([np.polyval(fun[sec],rad[-1]),.01]))
-##            rout2 = wsSecrad(smax[sec]-L,rad[-1],\
-##                                 np.sqrt(1e4**2-rad[-1]**2),\
-##                             psi=np.max([np.polyval(fun[sec],rad[-1]),.01]))
-            #Add to list of extreme ray positions
-##            rext.append(traceSingleRay(rout,smax[sec]-L,rad[-1],\
-##                                       np.sqrt(1e4**2-rad[-1]**2)\
-##                       ,np.max([np.polyval(fun[sec],rad[-1]),\
-##                                                  .01])))
-            #print rad[-1],rout,rout2,rext[-1][1][0]
+        rad = rad[:-1]
+
         #Add to list of node positions
         rsec.append(rad[:-1])
         
@@ -430,7 +459,7 @@ def traceXRS(rsec,smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
                 #pdb.set_trace()
             rays = tran.vignette(rays,ind=ind)
             weights = weights[ind]
-            previousrho.append(wsSecrad(smax[i]-L,r,z,psi=psi)+gap)
+            previousrho.append(wsSecrad(smax[i]-L,r,z,psi=psi)+.4)
 
             #Go to focus
             if rrays is False:
@@ -459,7 +488,7 @@ def traceXRS(rsec,smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
            anal.rmsCentroid(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
            np.sum(mweights)
 
-def plotNodeSpacing(rsec,smax,pmin,fun,nodegap,L=200.):
+def plotNodeSpacing(rsec,smax,pmin,fun,nodegap,L=200.,pbeam=True):
     """
     Plot mirror positions and beam extent for each mirror node
     """
@@ -481,39 +510,51 @@ def plotNodeSpacing(rsec,smax,pmin,fun,nodegap,L=200.):
 
             if np.where(r==rsec[i])[0] == 136:
                 pdb.set_trace()
-            
-            #Plot beam
-            #Set up ray
-            ray = sources.pointsource(0.,1)
-            ray[6] = -ray[6]
-            ray[1][0] = rp1
-            tran.transform(ray,0,0,-1e4,0,0,0)
 
-            #Trace to shell
-            surf.wsPrimary(ray,r,z,psi)
-            tran.reflect(ray)
-            surf.wsSecondary(ray,r,z,psi)
-            tran.reflect(ray)
-            rb1 = ray[1][0]
-            z1 = ray[3][0]
+            if pbeam is True:
+                #Plot beam
+                #Set up ray
+                ray = sources.pointsource(0.,1)
+                ray[6] = -ray[6]
+                ray[1][0] = rp1
+                tran.transform(ray,0,0,-1e4,0,0,0)
 
-            #Set up ray
-            ray = sources.pointsource(0.,1)
-            ray[6] = -ray[6]
-            ray[1][0] = rp2
-            tran.transform(ray,0,0,-1e4,0,0,0)
+                #Trace to shell
+                surf.wsPrimary(ray,r,z,psi)
+                tran.reflect(ray)
+                surf.wsSecondary(ray,r,z,psi)
+                tran.reflect(ray)
+                rb1 = ray[1][0]
+                z1 = ray[3][0]
 
-            #Trace to shell
-            surf.wsPrimary(ray,r,z,psi)
-            tran.reflect(ray)
-            surf.wsSecondary(ray,r,z,psi)
-            tran.reflect(ray)
-            rb2 = ray[1][0]
-            z2 = ray[3][0]
+                #Set up ray
+                ray = sources.pointsource(0.,1)
+                ray[6] = -ray[6]
+                ray[1][0] = rp2
+                tran.transform(ray,0,0,-1e4,0,0,0)
 
-            plt.plot([rp1,rp1,rb1,0],[1e4+500.,pmin[i]+L,z1,0],'b--')
-            plt.plot([rp2,rp2,rb2,0],[1e4+500.,pmin[i],z2,0],'b--')
-            
+                #Trace to shell
+                surf.wsPrimary(ray,r,z,psi)
+                tran.reflect(ray)
+                surf.wsSecondary(ray,r,z,psi)
+                tran.reflect(ray)
+                rb2 = ray[1][0]
+                z2 = ray[3][0]
+
+                plt.plot([rp1,rp1,rb1,0],[1e4+500.,pmin[i]+L,z1,0],'b--')
+                plt.plot([rp2,rp2,rb2,0],[1e4+500.,pmin[i],z2,0],'b--')
+    return None
+
+def plotZetaRx(rsec,rx,fmt=''):
+    """
+    Plot zeta as a function of r for the nodes defined
+    by the prescription scripts.
+    """
+    plt.figure('ZetaRx')
+    for i in range(len(rsec)):
+        plt.plot(rsec[i],np.polyval(rx[2][i],rsec[i]),fmt)
+    return None
+    
 def traceNode(sec,nodeindex,rsec,smax,pmin,fun,nodegap,L=200.):
     """
     Trace individual node from prescription.
@@ -525,6 +566,16 @@ def traceNode(sec,nodeindex,rsec,smax,pmin,fun,nodegap,L=200.):
     traceZeta(pmin[sec],R0=r,Z0=z,psi=psi,offaxis=0.,L=200.,az=100.,\
               pause=True)
     
+
+def fullAnalysis():
+    angle = np.linspace(0.,3e-3,11)
+    energy = np.array([.5,1.,2.,4.,6.,10.])*1000.
+    rx = [defineRx(N=ni,nodegap=50.) for ni in range(3,6)]
+    rnodes = [defineNodePositions(*r) for r in rx]
+    res = [[[traceXRS(rsec,*r,energy=e,rough=.3,offaxis=ang) \
+          for rsec,r in zip(rnodes,rx)] for e in energy] \
+           for ang in angle]
+    return rx,rnodes,res
 
 """
 Factors to consider for this project:
