@@ -503,3 +503,60 @@ subroutine torus(x,y,z,l,m,n,ux,uy,uz,num,rin,rout)
   !$omp end parallel do
 
 end subroutine torus
+
+!Function to trace to a general conic
+!Vertex assumed at origin, opening up in the +z direction
+!Radius of curvature and conic constant are required parameters
+!Uses Newton shooting, with p as a vector of even polynomial terms
+!p(1) is quadratic, p(2) is quartic, etc.
+subroutine conicplus(x,y,z,l,m,n,ux,uy,uz,num,R,K,p,Np)
+  !Declarations
+  implicit none
+  integer, intent(in) :: num,Np
+  real*8, intent(in) :: p(Np)
+  real*8 , intent(inout) :: x(num),y(num),z(num),l(num),m(num),n(num),ux(num),uy(num),uz(num)
+  real*8, intent(in) :: R,K
+  real*8 :: delt,rad,a0,a1,F,Fr,Fx,Fy,Fz,Fp
+  integer :: i,j
+
+  !Trace to conic first, then perform Newton shooting?
+
+  !Implement Newton shooting
+  !Loop through rays and trace to mirror
+  do i=1,num
+    delt = 100.
+    do while(abs(delt)>1.e-10)
+      !Compute summation terms
+      rad = sqrt(x(i)**2+y(i)**2)
+      a0 = 0.
+      a1 = 0.
+      do j=1,Np
+        a0 = a0 + p(j)*rad**(2*j)
+        a1 = a1 + p(j)*(2*j)*rad**(2*j-1)
+      end do
+      !Compute function and derivatives
+      F = rad**2 - 2*R*(z(i)-a0) + (K+1)*(z(i)-a0)**2
+      Fr = 2*rad + 2*R*a1 - (K+1)*2*(z(i)-a0)*a1
+      Fx = Fr * x(i)/rad
+      Fy = Fr * y(i)/rad
+      Fz = -2*R + (K+1)*2*(z(i)-a0)
+      Fp = Fx*l(i) + Fy*m(i) + Fz*n(i)
+      delt = -F/Fp
+      !print *, x(i),y(i),z(i)
+      !print *, F, Fp
+      !print * ,delt
+      !read *, dum
+      x(i) = x(i) + l(i)*delt
+      y(i) = y(i) + m(i)*delt
+      z(i) = z(i) + n(i)*delt
+    end do
+    ux(i) = Fx/Fp
+    uy(i) = Fy/Fp
+    uz(i) = Fz/Fp
+    !print *, x(i),y(i),z(i)
+    !print *, ux(i),uy(i),uz(i)
+    !read *, dum
+  end do
+
+
+end subroutine conicplus

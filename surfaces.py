@@ -97,6 +97,14 @@ def conic(rays,R,K,nr=None):
         surf.conic(x,y,z,l,m,n,ux,uy,uz,R,K)
     return
 
+def conicplus(rays,R,K,p):
+    """Wrapper for conic surface with radius of curvature R
+    and conic constant K
+    """
+    opd,x,y,z,l,m,n,ux,uy,uz = rays
+    surf.conic(x,y,z,l,m,n,ux,uy,uz,R,K,p)
+    return
+
 def torus(rays,rin,rout):
     """Wrapper for toroidal surface. Outer radius
     is in xy plane, inner radius is orthogonal.
