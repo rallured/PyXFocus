@@ -86,6 +86,19 @@ def sphere(rays,rad,nr=None):
         surf.tracesphere(x,y,z,l,m,n,ux,uy,uz,rad)
     return
 
+def tanSphere(rays,rad,nr=None):
+    """
+    Wrapper for spherical surface placed tangent to XY plane
+    Positive radius of curvature curves toward the +Z direction
+    """
+    #Go to center of curvature
+    tran.transform(rays,0,0,rad,0,0,0)
+    #Place sphere
+    sphere(rays,rad,nr=nr)
+    #Go back to tangent plane
+    tran.transform(rays,0,0,-rad,0,0,0)
+    return
+
 def conic(rays,R,K,nr=None):
     """Wrapper for conic surface with radius of curvature R
     and conic constant K
@@ -97,12 +110,15 @@ def conic(rays,R,K,nr=None):
         surf.conic(x,y,z,l,m,n,ux,uy,uz,R,K)
     return
 
-def conicplus(rays,R,K,p):
+def conicplus(rays,R,K,p,nr=None):
     """Wrapper for conic surface with radius of curvature R
     and conic constant K
     """
     opd,x,y,z,l,m,n,ux,uy,uz = rays
-    surf.conic(x,y,z,l,m,n,ux,uy,uz,R,K,p)
+    if nr is not None:
+        surf.conicplusopd(opd,x,y,z,l,m,n,ux,uy,uz,R,K,p,nr)
+    else:
+        surf.conicplus(x,y,z,l,m,n,ux,uy,uz,R,K,p)
     return
 
 def torus(rays,rin,rout):
@@ -149,11 +165,14 @@ def paraxialY(rays,F):
     surf.paraxialy(x,y,z,l,m,n,ux,uy,uz,F)
     return
 
-def wolterprimary(rays,r0,z0,psi=1.):
+def wolterprimary(rays,r0,z0,psi=1.,nr=None):
     """Wrapper for Wolter primary surface - no vignetting
     """
     opd,x,y,z,l,m,n,ux,uy,uz = rays
-    wolt.wolterprimary(x,y,z,l,m,n,ux,uy,uz,r0,z0,psi)
+    if nr is None:
+        wolt.wolterprimary(x,y,z,l,m,n,ux,uy,uz,r0,z0,psi)
+    else:
+        wolt.wolterprimaryopd(opd,x,y,z,l,m,n,ux,uy,uz,r0,z0,psi,nr)
     return
 
 def wolterprimarynode(rays,r0,z0,psi=1.):

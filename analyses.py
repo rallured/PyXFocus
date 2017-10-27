@@ -5,6 +5,7 @@ import pdb
 from utilities.imaging.fitting import circle,circleMerit
 from utilities.imaging.analysis import ptov,rms
 import utilities.imaging.man as man
+import PyXFocus.reconstruct as reconstruct
 
 def centroid(rays,weights=None):
     """Compute the centroid of the rays in the xy plane
@@ -118,7 +119,8 @@ def grazeAngle(rays,flat=False):
                      rays[5]*rays[8] +\
                      rays[6]*rays[9])
 
-def interpolateVec(rays,I,Nx,Ny,xr=None,yr=None,method='linear'):
+def interpolateVec(rays,I,Nx,Ny,xr=None,yr=None,method='linear',\
+                   polar=False):
     """
     Interpolate a ray vector onto a 2D grid based on the X and Y
     positions of the rays. Assume that the rays randomly fill a
@@ -132,6 +134,7 @@ def interpolateVec(rays,I,Nx,Ny,xr=None,yr=None,method='linear'):
     #Unpack needed vectors
     x,y = rays[1:3]
     interpVec = rays[I]
+    
     #Set up new grid
     if xr is None:
         xr=[x.min(),x.max()]
@@ -140,10 +143,53 @@ def interpolateVec(rays,I,Nx,Ny,xr=None,yr=None,method='linear'):
                               np.linspace(yr[0],yr[1],Ny))
     dx = np.diff(gridx)[0][0]
     dy = np.diff(np.transpose(gridy))[0][0]
-    #Call griddata for interpolation
-    res = griddata((x,y),interpVec,(gridx,gridy),method=method)
+
+    if polar is True:
+        #Convert to polar
+        rho = np.sqrt(x**2+y**2)
+        theta1 = np.arctan2(y,x)
+        theta2 = np.arctan2(x,y)
+        rhog = np.sqrt(gridx**2+gridy**2)
+        azg1 = rhog * np.arctan2(gridy,gridx)
+        azg2 = rhog * np.arctan2(gridx,gridy)
+        res1 = griddata((rho,theta1*rho),interpVec,(rhog,azg1),method=method)
+        res2 = griddata((rho,theta2*rho),interpVec,(rhog,azg2),method=method)
+        res = np.nanmedian([res1,res2],axis=0)
+    else:
+        res = griddata((x,y),interpVec,(gridx,gridy),method=method)
     
     return res,dx,dy
+
+def wavefront(rays,Nx,Ny,method='cubic',polar=False):
+    """
+    Interpolate the beam slopes and then integrate the wavefront.
+    Rays assumed to be in the XY plane.
+    """
+    #Interpolate slopes to regular grid
+    y,dx,dy = interpolateVec(rays,5,Nx,Ny,method=method,polar=polar)
+    x,dx,dy = interpolateVec(rays,4,Nx,Ny,method=method,polar=polar)
+        
+
+    #Prepare arrays for integration
+    #Reconstruct requires nans be replaced by 100
+    #Fortran functions require arrays to be packed in
+    #fortran contiguous mode
+    x = man.padRect(x)
+    y = man.padRect(y)
+    phase = np.zeros(np.shape(x),order='F')
+    phase[np.isnan(x)] = 100.
+    x[np.isnan(x)] = 100.
+    y[np.isnan(y)] = 100.
+    y = np.array(y,order='F')
+    x = np.array(x,order='F')
+
+    #Reconstruct and remove border    
+    phase = reconstruct.reconstruct(y,x,1e-12,dx,phase)
+    phase[phase==100] = np.nan
+    x[x==100] = np.nan
+    y[y==100] = np.nan
+
+    return phase[1:-1,1:-1],x[1:-1,1:-1],y[1:-1,1:-1]
 
 def measurePower(rays,Nx,Ny,method='linear'):
     """Measure the radius of curvature in X and Y

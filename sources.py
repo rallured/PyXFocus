@@ -39,8 +39,8 @@ def circularbeam(rad,num):
     opd = np.copy(l)
     return [opd,x,y,z,l,m,n,ux,uy,uz]
 
-def annulus(rin,rout,num):
-    """Define annulus of rays pointing in +z direction
+def annulus(rin,rout,num,zhat=-1.):
+    """Define annulus of rays pointing in -z direction
     """
     rho = np.sqrt(rin**2+np.random.rand(num)*(rout**2-rin**2))
     theta = np.random.rand(num)*2*np.pi
@@ -49,7 +49,7 @@ def annulus(rin,rout,num):
     z = np.repeat(0.,num)
     l = np.repeat(0.,num)
     m = np.repeat(0.,num)
-    n = np.repeat(1.,num)
+    n = np.repeat(zhat,num)
     ux = np.copy(l)
     uy = np.copy(l)
     uz = np.copy(l)
