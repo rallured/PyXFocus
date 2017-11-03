@@ -53,6 +53,60 @@ subroutine wolterprimary(x,y,z,l,m,n,ux,uy,uz,num,r0,z0,psi)
 
 end subroutine wolterprimary
 
+!This function traces to a Wolter I primary mirror
+!Defined by Van Speybroeck prescription
+!For WFS test, use flat to get rays close so they find correct intersection
+!Surface should be placed at common focus with z+ pointing toward mirrors
+subroutine wolterprimaryopd(opd,x,y,z,l,m,n,ux,uy,uz,num,r0,z0,psi,nr)
+  !Declarations
+  implicit none
+  integer, intent(in) :: num
+  real*8 , intent(inout) :: opd(num),x(num),y(num),z(num),l(num),m(num),n(num),ux(num),uy(num),uz(num)
+  real*8, intent(in) :: r0,z0,psi,nr
+  real*8 :: alpha,thetah,thetap,p,d,e
+  real*8 :: F,Fx,Fy,Fz,Fp,delt,dum
+  integer :: i
+
+  !Compute Van Speybroeck parameters
+  alpha = .25*atan(r0/z0)
+  thetah = 2*(1+2*psi)/(1+psi) * alpha
+  thetap = 2*psi/(1+psi) * alpha
+  p = z0*tan(4*alpha)*tan(thetap)
+  d = z0*tan(4*alpha)*tan(4*alpha-thetah)
+  e = cos(4*alpha)*(1+tan(4*alpha)*tan(thetah))
+
+  Fz = 2*p
+  !Loop through rays and trace to mirror
+  !$omp parallel do private(delt,F,Fx,Fy,Fp)
+  do i=1,num
+    delt = 100.
+    do while(abs(delt)>1.e-10)
+      F = 2*p*z(i) + p**2 + 4*e**2*p*d/(e**2-1) - x(i)**2 - y(i)**2
+      Fx = -2.*x(i)
+      Fy = -2.*y(i)
+      Fp = Fx*l(i) + Fy*m(i) + Fz*n(i)
+      delt = -F/Fp
+      x(i) = x(i) + l(i)*delt
+      y(i) = y(i) + m(i)*delt
+      z(i) = z(i) + n(i)*delt
+      opd(i) = opd(i) + nr*delt
+      !print *, x(i),y(i),z(i)
+      !print *, F
+      !print * ,delt
+      !read *, dum
+    end do
+    Fp = sqrt(Fx*Fx+Fy*Fy+Fz*Fz)
+    ux(i) = Fx/Fp
+    uy(i) = Fy/Fp
+    uz(i) = Fz/Fp
+    !print *, x(i),y(i),z(i)
+    !print *, ux(i),uy(i),uz(i)
+    !read *, dum
+  end do
+  !$omp end parallel do
+
+end subroutine wolterprimaryopd
+
 !This function traces to a Wolter I secondary mirror
 !Defined by Van Speybroeck prescription
 !For WFS test, use flat to get rays close so they find correct intersection
@@ -522,11 +576,15 @@ subroutine spoCone(x,y,z,l,m,n,ux,uy,uz,num,R0,tg)
   integer, intent(in) :: num
   real*8 , intent(inout) :: x(num),y(num),z(num),l(num),m(num),n(num),ux(num),uy(num),uz(num)
   real*8, intent(in) :: R0,tg
+!  real*8 :: k,kterm,dbdx,dbdy,dbdz,dadb,beta,betas,ff,g,d,a
+!  real*8 :: gam,dbdzs,dadbs
+!  real*8 :: F,Fx,Fy,Fz,Fp,delt,dum,Fb
   integer :: i
   real*8 :: A,B,C,sl,det,t1,t2
 
   !Loop through rays and trace to mirror
   sl = tan(tg)
+  !$omp parallel do private(i,A,B,C,det,t1,t2)
   do i=1,num
     !Solve quadratic equation for ray advancement distance
     A = n(i)**2*sl**2 - m(i)**2 - l(i)**2
@@ -552,7 +610,12 @@ subroutine spoCone(x,y,z,l,m,n,ux,uy,uz,num,R0,tg)
       m(i) = 0.
       n(i) = 0.
     end if
+    !print *, x(i),y(i),z(i)
+    !print *, ux(i),uy(i),uz(i)
+    !print *, F, Fx, Fy, Fz
+    !read *, dum
   end do
+  !$omp end parallel do
 
 end subroutine spoCone
 

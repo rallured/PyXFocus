@@ -1,9 +1,8 @@
 import numpy as np
 
 ###### SOURCES #######
-# All sources are initialized to be 1 keV X-rays (wavelength = 1.24e-6 mm)
 
-def pointsource(ang,num,wave = 1.24e-6):
+def pointsource(ang,num):
     """Define point source with angular divergence
     Points in +z direction
     Ang is half angle
@@ -20,10 +19,10 @@ def pointsource(ang,num,wave = 1.24e-6):
     ux = np.repeat(0.,num)
     uy = np.repeat(0.,num)
     uz = np.repeat(0.,num)
-    wave = np.repeat(0.,num)
-    return [wave,x,y,z,l,m,n,ux,uy,uz]
+    opd = np.repeat(0.,num)
+    return [opd,x,y,z,l,m,n,ux,uy,uz]
 
-def circularbeam(rad,num,wave = 1.24e-6):
+def circularbeam(rad,num):
     """Define uniform, circular beam of radius rad, pointing in +z direction
     """
     rho = np.sqrt(np.random.rand(num))*rad
@@ -37,11 +36,11 @@ def circularbeam(rad,num,wave = 1.24e-6):
     ux = np.copy(l)
     uy = np.copy(l)
     uz = np.copy(l)
-    wave = np.copy(l)
-    return [wave,x,y,z,l,m,n,ux,uy,uz]
+    opd = np.copy(l)
+    return [opd,x,y,z,l,m,n,ux,uy,uz]
 
-def annulus(rin,rout,num,wave = 1.24e-6):
-    """Define annulus of rays pointing in +z direction
+def annulus(rin,rout,num,zhat=-1.):
+    """Define annulus of rays pointing in -z direction
     """
     rho = np.sqrt(rin**2+np.random.rand(num)*(rout**2-rin**2))
     theta = np.random.rand(num)*2*np.pi
@@ -50,14 +49,14 @@ def annulus(rin,rout,num,wave = 1.24e-6):
     z = np.repeat(0.,num)
     l = np.repeat(0.,num)
     m = np.repeat(0.,num)
-    n = np.repeat(1.,num)
+    n = np.repeat(zhat,num)
     ux = np.copy(l)
     uy = np.copy(l)
     uz = np.copy(l)
-    wave = np.copy(l)
-    return [wave,x,y,z,l,m,n,ux,uy,uz]
+    opd = np.copy(l)
+    return [opd,x,y,z,l,m,n,ux,uy,uz]
 
-def subannulus(rin,rout,dphi,num,zhat=1.,wave = 1.24e-6):
+def subannulus(rin,rout,dphi,num,zhat=1.):
     """Create a subapertured annulus source in +z direction
     Annulus is centered about theta=0 which points to +x
     If negz is set -1, rays will point in -z hat
@@ -73,26 +72,26 @@ def subannulus(rin,rout,dphi,num,zhat=1.,wave = 1.24e-6):
     ux = np.copy(l)
     uy = np.copy(l)
     uz = np.copy(l)
-    wave = np.copy(l)
-    return [wave,x,y,z,l,m,n,ux,uy,uz]
+    opd = np.copy(l)
+    return [opd,x,y,z,l,m,n,ux,uy,uz]
 
-def rectArray(xsize,ysize,num,wave = 1.24e-6):
+def rectArray(xsize,ysize,num):
     """Creates a regular array of rays using meshgrid and linspace"""
     x,y = np.meshgrid(np.linspace(-xsize,xsize,num),\
                       np.linspace(-ysize,ysize,num))
-    wave = np.repeat(0.,num**2)
+    opd = np.repeat(0.,num**2)
     x = x.flatten()
     y = y.flatten()
-    z = np.copy(wave)
+    z = np.copy(opd)
     l = np.repeat(0.,num**2)
     m = np.repeat(0.,num**2)
     n = np.repeat(1.,num**2)
     ux = np.copy(l)
     uy = np.copy(l)
     uz = np.copy(l)
-    return [wave,x,y,z,l,m,n,ux,uy,uz]
+    return [opd,x,y,z,l,m,n,ux,uy,uz]
 
-def convergingbeam(zset,rin,rout,tmin,tmax,num,lscat,wave = 1.24e-6):
+def convergingbeam(zset,rin,rout,tmin,tmax,num,lscat):
     """Converging sub-apertured annulus beam
     Place at nominal focus
     Input z position, inner and outer radius,
@@ -111,10 +110,10 @@ def convergingbeam(zset,rin,rout,tmin,tmax,num,lscat,wave = 1.24e-6):
     ux = np.repeat(0.,num)
     uy = np.repeat(0.,num)
     uz = np.repeat(0.,num)
-    wave = np.repeat(0.,num)
-    return [wave,x,y,z,l,m,n,ux,uy,uz]
+    opd = np.repeat(0.,num)
+    return [opd,x,y,z,l,m,n,ux,uy,uz]
 
-def convergingbeam2(zset,xmin,xmax,ymin,ymax,num,lscat,wave = 1.24e-6):
+def convergingbeam2(zset,xmin,xmax,ymin,ymax,num,lscat):
     """Rectangular converging beam
     Place at nominal focus
     Input z position and rectangular bounds
@@ -132,10 +131,10 @@ def convergingbeam2(zset,xmin,xmax,ymin,ymax,num,lscat,wave = 1.24e-6):
     ux = np.repeat(0.,num)
     uy = np.repeat(0.,num)
     uz = np.repeat(0.,num)
-    wave = np.repeat(0.,num)
-    return [wave,x,y,z,l,m,n,ux,uy,uz]
+    opd = np.repeat(0.,num)
+    return [opd,x,y,z,l,m,n,ux,uy,uz]
 
-def rectbeam(xhalfwidth,yhalfwidth,num,wave = 1.24e-6):
+def rectbeam(xhalfwidth,yhalfwidth,num):
     """Rectangular beam pointing in +z direction
     """
     x = (np.random.rand(num)-.5)*2*xhalfwidth
@@ -147,5 +146,5 @@ def rectbeam(xhalfwidth,yhalfwidth,num,wave = 1.24e-6):
     ux = np.repeat(0.,num)
     uy = np.repeat(0.,num)
     uz = np.repeat(0.,num)
-    wave = np.repeat(wave,num)
-    return [wave,x,y,z,l,m,n,ux,uy,uz]
+    opd = np.repeat(0.,num)
+    return [opd,x,y,z,l,m,n,ux,uy,uz]

@@ -484,9 +484,9 @@ subroutine torus(x,y,z,l,m,n,ux,uy,uz,num,rin,rout)
       Fz = 4*(rout+rin+z(i))*(2*rin*(rout+z(i)) + 2*rout*z(i)+z(i)**2+y(i)**2+x(i)**2)
       Fp = Fx*l(i) + Fy*m(i) + Fz*n(i)
       delt = -F/Fp
-      print *, x(i),y(i),z(i)
-      print *, F, Fp
-      print * ,delt
+      !print *, x(i),y(i),z(i)
+      !print *, F, Fp
+      !print * ,delt
       !read *, dum
       x(i) = x(i) + l(i)*delt
       y(i) = y(i) + m(i)*delt
@@ -503,3 +503,136 @@ subroutine torus(x,y,z,l,m,n,ux,uy,uz,num,rin,rout)
   !$omp end parallel do
 
 end subroutine torus
+
+!Function to trace to a general conic
+!Vertex assumed at origin, opening up in the +z direction
+!Radius of curvature and conic constant are required parameters
+!Uses Newton shooting, with p as a vector of even polynomial terms
+!p(1) is quadratic, p(2) is quartic, etc.
+subroutine conicplus(x,y,z,l,m,n,ux,uy,uz,num,R,K,p,Np)
+  !Declarations
+  implicit none
+  integer, intent(in) :: num,Np
+  real*8, intent(in) :: p(Np)
+  real*8 , intent(inout) :: x(num),y(num),z(num),l(num),m(num),n(num),ux(num),uy(num),uz(num)
+  real*8, intent(in) :: R,K
+  real*8 :: c,delt,rad,a0,a1,F,Fr,Fx,Fy,Fz,Fp,denom,dum
+  integer :: i,j
+
+  !Trace to conic first, then perform Newton shooting?
+  Fz = 1.
+  c = 1/R
+
+  !Implement Newton shooting
+  !Loop through rays and trace to mirror
+  !$omp parallel do private(delt,rad,a0,a1,denom,j,F,Fr,Fx,Fy,Fp)
+  do i=1,num
+    delt = 100.
+    do while(abs(delt)>1.e-10)
+      !Compute summation terms
+      rad = sqrt(x(i)**2+y(i)**2)
+      a0 = 0.
+      a1 = 0.
+      do j=1,Np
+        a0 = a0 + p(j)*rad**(2*j)
+        a1 = a1 + p(j)*(2*j)*rad**(2*j-1)
+      end do
+      !Compute function and derivatives
+      !F = rad**2 - 2*R*(z(i)-a0) + (K+1)*(z(i)-a0)**2
+      denom = sqrt(1-(K+1)*c**2*rad**2)+1
+      F = z(i) - c*rad**2 / denom + a0
+      !Fr = 2*rad + 2*R*a1 - (K+1)*2*(z(i)-a0)*a1
+      Fr = -(2*c*rad/denom + ((K+1)*rad**3*c**3)/(denom**2*sqrt(1-(K+1)*c**2*rad**2)))+a1
+      Fx = Fr * x(i)/rad
+      Fy = Fr * y(i)/rad
+      !Fz = -2*R + (K+1)*2*(z(i)-a0)
+      Fp = Fx*l(i) + Fy*m(i) + Fz*n(i)
+      delt = -F/Fp
+      !print *, x(i),y(i),z(i)
+      !print *, Fx,Fy,Fz
+      !print *, F, Fp
+      !print * ,delt
+      !read *, dum
+      x(i) = x(i) + l(i)*delt
+      y(i) = y(i) + m(i)*delt
+      z(i) = z(i) + n(i)*delt
+    end do
+    Fp = sqrt(Fx*Fx+Fy*Fy+Fz*Fz)
+    ux(i) = Fx/Fp
+    uy(i) = Fy/Fp
+    uz(i) = Fz/Fp
+    !print *, x(i),y(i),z(i)
+    !print *, ux(i),uy(i),uz(i)
+    !read *, dum
+  end do
+  !$omp end parallel do
+
+
+end subroutine conicplus
+
+!Function to trace to a general conic
+!Vertex assumed at origin, opening up in the +z direction
+!Radius of curvature and conic constant are required parameters
+!Uses Newton shooting, with p as a vector of even polynomial terms
+!p(1) is quadratic, p(2) is quartic, etc.
+subroutine conicplusopd(opd,x,y,z,l,m,n,ux,uy,uz,num,R,K,p,Np,nr)
+  !Declarations
+  implicit none
+  integer, intent(in) :: num,Np
+  real*8, intent(in) :: p(Np)
+  real*8 , intent(inout) :: opd(num),x(num),y(num),z(num),l(num),m(num),n(num),ux(num),uy(num),uz(num)
+  real*8, intent(in) :: R,K,nr
+  real*8 :: c,delt,rad,a0,a1,F,Fr,Fx,Fy,Fz,Fp,denom,dum
+  integer :: i,j
+
+  !Trace to conic first, then perform Newton shooting?
+  Fz = 1.
+  c = 1/R
+
+  !Implement Newton shooting
+  !Loop through rays and trace to mirror
+  !$omp parallel do private(delt,rad,a0,a1,denom,j,F,Fr,Fx,Fy,Fp)
+  do i=1,num
+    delt = 100.
+    do while(abs(delt)>1.e-10)
+      !Compute summation terms
+      rad = sqrt(x(i)**2+y(i)**2)
+      a0 = 0.
+      a1 = 0.
+      do j=1,Np
+        a0 = a0 + p(j)*rad**(2*j)
+        a1 = a1 + p(j)*(2*j)*rad**(2*j-1)
+      end do
+      !Compute function and derivatives
+      !F = rad**2 - 2*R*(z(i)-a0) + (K+1)*(z(i)-a0)**2
+      denom = sqrt(1-(K+1)*c**2*rad**2)+1
+      F = z(i) - c*rad**2 / denom + a0
+      !Fr = 2*rad + 2*R*a1 - (K+1)*2*(z(i)-a0)*a1
+      Fr = -(2*c*rad/denom + ((K+1)*rad**3*c**3)/(denom**2*sqrt(1-(K+1)*c**2*rad**2)))+a1
+      Fx = Fr * x(i)/rad
+      Fy = Fr * y(i)/rad
+      !Fz = -2*R + (K+1)*2*(z(i)-a0)
+      Fp = Fx*l(i) + Fy*m(i) + Fz*n(i)
+      delt = -F/Fp
+      !print *, x(i),y(i),z(i)
+      !print *, Fx,Fy,Fz
+      !print *, F, Fp
+      !print * ,delt
+      !read *, dum
+      x(i) = x(i) + l(i)*delt
+      y(i) = y(i) + m(i)*delt
+      z(i) = z(i) + n(i)*delt
+      opd(i) = opd(i) + delt*nr
+    end do
+    Fp = sqrt(Fx*Fx+Fy*Fy+Fz*Fz)
+    ux(i) = Fx/Fp
+    uy(i) = Fy/Fp
+    uz(i) = Fz/Fp
+    !print *, x(i),y(i),z(i)
+    !print *, ux(i),uy(i),uz(i)
+    !read *, dum
+  end do
+  !$omp end parallel do
+
+
+end subroutine conicplusopd
