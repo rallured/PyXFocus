@@ -1,0 +1,7 @@
+# Ignore compiled python modules
+*.pyc
+# Ignore compiled versions of Fortran
+*.so
+*.so.dSYM/
+# Ignore the DS Store and needed import __init__.pyc
+*.DS_Store

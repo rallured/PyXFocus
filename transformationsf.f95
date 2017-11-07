@@ -272,8 +272,8 @@ subroutine grat(x,y,l,m,n,num,d,order,wave)
   !Declarations
   integer, intent(in) :: num
   real*8, intent(in) :: x(num),y(num)
-  real*8, intent(inout) :: l(num),m(num),n(num)
-  real*8, intent(in) :: d,wave,order
+  real*8, intent(inout) :: l(num),m(num),n(num),wave(num),order(num)
+  real*8, intent(in) :: d
   integer :: i
   real*8 :: pi, dum
 
@@ -283,7 +283,7 @@ subroutine grat(x,y,l,m,n,num,d,order,wave)
   !$omp parallel do
   do i=1,num
     !Compute new direction cosines
-    l(i) = l(i) - order*wave/d
+    l(i) = l(i) - order(i)*wave(i)/d
     n(i) = sqrt(1 - l(i)**2 - m(i)**2)
     !Evanescence?
     if ((l(i)**2+m(i)**2)>1) then
