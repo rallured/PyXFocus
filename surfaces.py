@@ -7,6 +7,7 @@ import PyXFocus.transformations as tran
 from PyXFocus.analyses import analyticYPlane,analyticXPlane,analyticImagePlane
 import PyXFocus.conicsolve as con
 import pdb
+import utilities.imaging.zernikemod as zernikemod
 
 def flat(rays,ind=None,nr=None):
     """Trace rays to the XY plane

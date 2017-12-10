@@ -33,27 +33,21 @@ def littrow():
     #Bring rays to common plane
     surf.flat(rays)
 
-    #Interpolate slopes to regular grid
-    y,dx,dy = anal.interpolateVec(rays,5,200,200)
-    x,dx,dy = anal.interpolateVec(rays,4,200,200)
+    #Get wavefront
+    r = anal.wavefront(rays,200,200)
 
-    #Prepare arrays for integration
-    #Reconstruct requires nans be replaced by 100
-    #Fortran functions require arrays to be packed in
-    #fortran contiguous mode
-    x = man.padRect(x)
-    y = man.padRect(y)
-    phase = np.zeros(np.shape(x),order='F')
-    phase[np.isnan(x)] = 100.
-    x[np.isnan(x)] = 100.
-    y[np.isnan(y)] = 100.
-    y = np.array(y,order='F')
-    x = np.array(x,order='F')
+    return r
 
-    #Reconstruct and remove border    
-    phase = reconstruct.reconstruct(x,y,1e-12,dx,phase)
-    phase[phase==100] = np.nan
-    x[x==100] = np.nan
-    y[y==100] = np.nan
+def testwave():
+    """
+    Verify wavefront reconstruction is occurring properly
+    Coefficients can be altered in zernsurf and then resulting
+    wavefront can be examined for the appropriate structure.
+    """
+    #Set up Zernike wave
+    rays = sources.circularbeam(1.,10000)
+    surf.zernsurf(rays,[0,0,0,.00,.001],1.)
+    tran.reflect(rays)
 
-    return man.stripnans(phase),man.stripnans(x),man.stripnans(y)
+    r = anal.wavefront(rays,200,200)
+    return r
