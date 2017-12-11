@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
+from scipy.optimize import curve_fit
 import pdb
 from utilities.imaging.fitting import circle,circleMerit
 from utilities.imaging.analysis import ptov,rms
