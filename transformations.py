@@ -3,6 +3,9 @@ import transformationsf as tran
 import transformMod as tr
 import pdb
 
+def copy_rays(rays):
+    return [rays[i].copy() for i in range(len(rays))]
+
 def transform(rays,dx,dy,dz,rx,ry,rz,ind=None,coords=None):
     """Coordinate transformation. translations are done first,
     then Rx,Ry,Rz
@@ -78,7 +81,7 @@ def steerY(rays,coords=None):
     return
 
 def steerX(rays,coords=None):
-    """Rotate reference frame for zero mean y tilt"""
+    """Rotate reference frame for zero mean x tilt"""
     while np.abs(np.mean(rays[4])) > 1e-6:
         transform(rays,0,0,0,0,-np.mean(rays[4]),0,coords=coords)
     return
@@ -158,10 +161,11 @@ def vignette(rays,ind=None):
     ind is array of "good" indices, all others are removed
     """
     opd,x,y,z,l,m,n,ux,uy,uz = rays
-    if ind==None:
+    
+    if ind is None:
         mag = l**2+m**2+n**2
         ind = np.where(mag>.1) #Automatic vignetting
-                            #requires position vector set to 0.
+                        #requires position vector set to 0.
     
     return [rays[i][ind] for i in range(10)]
 
@@ -222,3 +226,6 @@ def applyTPos(x,y,z,coords,inverse=False):
     pos = [x,y,z,np.ones(np.size(x))]
     pos = np.dot(coords[i+1],pos)[:3]
     return pos
+
+def skew(vec):
+    return np.array([[0,-vec[2],vec[1]],[vec[2],0,-vec[0]],[-vec[1],vec[0],0]])

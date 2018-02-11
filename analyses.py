@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
+from scipy.optimize import curve_fit
 import pdb
 from utilities.imaging.fitting import circle,circleMerit
 from utilities.imaging.analysis import ptov,rms
@@ -134,12 +135,37 @@ def analyticXPlane(rays,weights=None):
     dz = -bx/ax
     return dz
 
-def grazeAngle(rays,flat=False):
+#def grazeAngle(rays,flat=False):
+#    """Find the graze angle of the rays with the current
+#    surface normal."""
+#    return np.arcsin(rays[4]*rays[7] +\
+#                     rays[5]*rays[8] +\
+#                     rays[6]*rays[9])
+
+def indAngle(rays,ind = None,normal = None):
+    """Find the incidence angle of the rays with either the current or a specified
+    surface normal."""
+    if normal is None:
+        if ind is not None:
+            wave,x,y,z,l,m,n,ux,uy,uz = rays
+            tx,ty,tz,tl,tm,tn,tux,tuy,tuz = x[ind],y[ind],z[ind],l[ind],m[ind],n[ind],ux[ind],uy[ind],uz[ind]
+            iangs = np.arccos(tl*tux + tm*tuy + tn*tuz)
+        else:
+            iangs = np.arccos(rays[4]*rays[7] + rays[5]*rays[8] + rays[6]*rays[9])
+    else:
+        if ind is not None:
+            wave,x,y,z,l,m,n,ux,uy,uz = rays
+            dir_cosines = np.vstack((l[ind],m[ind],n[ind]))
+            iangs = np.arccos(np.dot(np.array([normal]),dir_cosines))[0]
+        else:
+            dir_cosines = np.vstack((rays[4],rays[5],rays[6]))
+            iangs = np.arccos(np.dot(np.array([normal]),dir_cosines))[0]
+    return iangs
+
+def grazeAngle(rays,ind = None):
     """Find the graze angle of the rays with the current
     surface normal."""
-    return np.arcsin(rays[4]*rays[7] +\
-                     rays[5]*rays[8] +\
-                     rays[6]*rays[9])
+    return np.pi/2 - indAngle(rays,ind = ind)
 
 def interpolateVec(rays,I,Nx,Ny,xr=None,yr=None,method='linear',\
                    polar=False):
