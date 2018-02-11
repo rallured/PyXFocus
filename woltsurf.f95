@@ -698,3 +698,204 @@ subroutine ellipsoidWoltLL(x,y,z,l,m,n,ux,uy,uz,num,r0,z0,psi,S,zmax,zmin,dphi,c
   !$omp end parallel do
 
 end subroutine ellipsoidWoltLL
+
+!This function traces to a Wolter-Schwarzschild primary mirror
+!Defined by Van Speybroeck prescription
+!Surface should be placed at common focus with z+ pointing toward mirrors
+!If ray is within inner radius of mirror (defined by betas), it will be
+!traced to minimum z position
+!Code in Python wrapper must vignette such rays
+subroutine wsprimaryBack(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi,thick)
+  !Declarations
+  implicit none
+  integer, intent(in) :: num
+  real*8 , intent(inout) :: x(num),y(num),z(num),l(num),m(num),n(num),ux(num),uy(num),uz(num)
+  real*8, intent(in) :: alpha,z0,psi,thick
+  real*8 :: k,kterm,dbdx,dbdy,beta,betas,ff,g,r,theta,x2,y2
+  real*8 :: F,Fx,Fy,Fz,Fp,delt,dum,Fb
+  integer :: i, flag, c
+
+  !Compute Chase parameters
+  betas = 4*alpha
+  ff = z0/cos(betas)
+  g = ff / psi
+  k = tan(betas/2)**2
+
+  !Loop through rays and trace to mirror
+  !$omp parallel do private(i,delt,F,Fx,Fy,Fz,Fp,Fb,kterm,beta,dbdx,dbdy,flag,r,x2,y2,theta)
+  do i=1,num
+    delt = 100.
+    c = 0
+    do while(abs(delt)>1.e-8)
+      !Adjust x and y positions
+      r = sqrt(x(i)**2+y(i)**2)
+      theta = atan2(y(i),x(i))
+      x2 = (r-thick)*cos(theta)
+      y2 = (r-thick)*sin(theta)
+      beta = asin(sqrt(x2**2 + y2**2)/ff)
+      flag = 0
+      if (beta<=betas) then
+        beta = betas
+        flag = 1
+        kterm = 0.
+      else
+        kterm = (1/k)*tan(beta/2)**2 - 1
+      end if
+      F = -z(i) - ff*sin(betas/2)**2 + &
+          ff**2*sin(beta)**2/(4*ff*sin(betas/2)**2) + &
+          g*cos(beta/2)**4*(kterm)**(1-k)
+      Fb = ff**2*sin(beta)*cos(beta)/(2*ff*sin(betas/2)**2) - &
+           2*g*cos(beta/2)**3*sin(beta/2)*(kterm)**(1-k) + &
+           g*(1-k)*cos(beta/2)*sin(beta/2)*(kterm)**(-k)*(1/k)
+      Fz = -1.
+      if (flag==1) then
+        r = sqrt(x2**2 + y2**2)
+        Fb = ff**2*sin(betas)*cos(betas)/(2*ff*sin(betas/2)**2) + &
+              g*(1-k)*cos(betas/2)*sin(betas/2)*(1/k)
+        F = F + (r - ff*sin(betas))*z(i)/(r**2+z(i)**2)*Fb
+        Fz = Fz + (r-ff*sin(betas))*(r**2-z(i)**2)/(r**2+z(i)**2)**2*Fb
+        !print *, Fb, F, Fz
+        !read *, dum
+      end if
+      dbdx = x2/sqrt(1-(x2**2+y2**2)/ff**2)/ff/sqrt(x2**2+y2**2)
+      dbdy = y2/sqrt(1-(x2**2+y2**2)/ff**2)/ff/sqrt(x2**2+y2**2)
+      Fx = Fb * dbdx
+      Fy = Fb * dbdy
+      Fp = Fx*l(i) + Fy*m(i) + Fz*n(i)
+      delt = -F/Fp
+      !print *, x(i),y(i),z(i)
+      !print *, F, Fx, Fy, Fz
+      !print *, kterm, Fb, flag,k,tan(beta/2)**2
+      x(i) = x(i) + l(i)*delt
+      y(i) = y(i) + m(i)*delt
+      z(i) = z(i) + n(i)*delt
+      if (c > 10) then
+        delt = 0.
+        l(i) = 0.
+        m(i) = 0.
+        n(i) = 0.
+      end if
+      c = c + 1
+      !read *, dum
+    end do
+    Fp = sqrt(Fx*Fx+Fy*Fy+Fz*Fz)
+    ux(i) = -Fx/Fp
+    uy(i) = -Fy/Fp
+    uz(i) = -Fz/Fp
+    !print *, x(i),y(i),z(i)
+    !print *, ux(i),uy(i),uz(i)
+    !read *, dum
+  end do
+  !$omp end parallel do
+
+end subroutine wsprimaryBack
+
+!This function traces to a Wolter-Schwarzschild secondary mirror
+!Defined by Van Speybroeck prescription
+!Surface should be placed at common focus with z+ pointing toward mirrors
+!If ray is within inner radius of mirror (defined by betas), it will be
+!traced to minimum z position
+!Code in Python wrapper must vignette such rays
+subroutine wssecondaryBack(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi,thick)
+  !Declarations
+  implicit none
+  integer, intent(in) :: num
+  real*8 , intent(inout) :: x(num),y(num),z(num),l(num),m(num),n(num),ux(num),uy(num),uz(num)
+  real*8, intent(in) :: alpha,z0,psi,thick
+  real*8 :: k,kterm,dbdx,dbdy,dbdz,dadb,beta,betas,ff,g,d,a,r,theta,x2,y2
+  real*8 :: gam,dbdzs,dadbs
+  real*8 :: F,Fx,Fy,Fz,Fp,delt,dum,Fb
+  integer :: i, flag, c
+
+  !Compute Chase parameters
+  betas = 4*alpha
+  ff = z0/cos(betas)
+  g = ff / psi
+  k = tan(betas/2)**2
+
+  !Loop through rays and trace to mirror
+  !$omp parallel do private(i,delt,F,Fx,Fy,Fz,Fp,Fb,kterm,beta,dbdx,dbdy,dbdz,flag,c,a,dadbs,dbdzs,gam,dadb,r,theta,x2,y2)
+  do i=1,num
+    delt = 100.
+    c = 0
+    do while(abs(delt)>1.e-8)
+      !Adjust x and y positions
+      r = sqrt(x(i)**2 + y(i)**2)
+      theta = atan2(y(i),x(i))
+      x2 = (r-thick)*cos(theta)
+      y2 = (r-thick)*sin(theta)
+      beta = atan2(sqrt(x2**2 + y2**2),z(i))
+      flag = 0
+      if (beta<=betas) then
+        beta = betas
+        kterm = 0
+        a = 1/ff
+        flag = 1
+      else
+        kterm = (1/k)*tan(beta/2)**2 - 1
+        a = (1-cos(beta))/(1-cos(betas))/ff + &
+          (1+cos(beta))/(2*g)*(kterm)**(1+k)
+      end if
+      F = -z(i) + cos(beta)/a
+      !Add corrective term to F if beta was < betas
+      if (flag==1) then
+        Fb = 0.
+        dadbs = sin(betas)/ff/(1-cos(betas)) + &
+                (k+1)*(cos(betas)+1)*tan(betas/2)/cos(betas/2)**2/2/g/k
+        dbdzs = -sin(betas)**2/sqrt(x2**2+y2**2)
+        gam = (-ff*sin(betas)-ff**2*cos(betas)*dadbs)*dbdzs
+        F = F + gam*(z(i)-sqrt(x2**2+y2**2)/tan(betas))
+        Fx = -2./tan(betas)*x2/sqrt(x2**2+y2**2)
+        Fy = -2./tan(betas)*y2/sqrt(x2**2+y2**2)
+        Fz = gam - 1.
+        !print *, x(i), y(i), z(i)
+        !print *, F, Fx, Fy, Fz
+        !print *, delt
+        !read *, dum
+      !Otherwise, business as usual
+      else
+        dadb = sin(beta)/ff/(1-cos(betas)) - &
+               sin(beta)/(2*g)*(kterm)**(1+k) + &
+               (k+1)*(cos(beta)+1)*tan(beta/2)*kterm**k/2/g/k/(cos(beta/2)**2)
+        Fb = -sin(beta)/a - cos(beta)/a**2*dadb
+        dbdx = x2*z(i)/(x2**2+y2**2+z(i)**2)/sqrt(x2**2+y2**2)
+        dbdy = y2*z(i)/(x2**2+y2**2+z(i)**2)/sqrt(x2**2+y2**2)
+        dbdz = -sqrt(x2**2+y2**2)/(x2**2+y2**2+z(i)**2)
+        Fx = Fb * dbdx
+        Fy = Fb * dbdy
+        Fz = -1. + Fb*dbdz
+      end if
+      !We have derivatives, now compute the iteration
+      Fp = Fx*l(i) + Fy*m(i) + Fz*n(i)
+      delt = -F/Fp
+      !print *, x(i), y(i), z(i)
+      !print *, F, Fx, Fy, Fz
+      !print *, delt
+      !read *, dum
+      x(i) = x(i) + l(i)*delt
+      y(i) = y(i) + m(i)*delt
+      z(i) = z(i) + n(i)*delt
+      if (c > 10) then
+        delt = 0.
+        l(i) = 0.
+        m(i) = 0.
+        n(i) = 0.
+      end if
+      !print *, x(i),y(i),z(i)
+      !print *, F
+      !print * ,delt
+      !read *, dum
+      c = c+1
+    end do
+    Fp = sqrt(Fx*Fx+Fy*Fy+Fz*Fz)
+    ux(i) = Fx/Fp
+    uy(i) = Fy/Fp
+    uz(i) = Fz/Fp
+    !print *, x(i),y(i),z(i)
+    !print *, ux(i),uy(i),uz(i)
+    !print *, F, Fx, Fy, Fz
+    !read *, dum
+  end do
+  !$omp end parallel do
+
+end subroutine wssecondaryBack

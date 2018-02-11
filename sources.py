@@ -60,11 +60,28 @@ def subannulus(rin,rout,dphi,num,zhat=1.):
     """Create a subapertured annulus source in +z direction
     Annulus is centered about theta=0 which points to +x
     If negz is set -1, rays will point in -z hat
+    dphi is full angular width
     """
     rho = np.sqrt(rin**2+np.random.rand(num)*(rout**2-rin**2))
     theta = np.random.rand(num)*dphi - dphi/2.
     x = rho*np.cos(theta)
     y = rho*np.sin(theta)
+    z = np.repeat(0.,num)
+    l = np.repeat(0.,num)
+    m = np.repeat(0.,num)
+    n = np.repeat(zhat,num)
+    ux = np.copy(l)
+    uy = np.copy(l)
+    uz = np.copy(l)
+    opd = np.copy(l)
+    return [opd,x,y,z,l,m,n,ux,uy,uz]
+
+def xslit(xin,xout,num,zhat=-1.):
+    """
+    Create linearly spaced rays from xin to xout pointing in zhat
+    """
+    x = np.linspace(xin,xout,num)
+    y = np.repeat(0.,num)
     z = np.repeat(0.,num)
     l = np.repeat(0.,num)
     m = np.repeat(0.,num)

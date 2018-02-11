@@ -37,19 +37,41 @@ def rmsY(rays,weights=None):
     rmsy = np.sqrt(np.average((y-cy)**2,weights=weights))
     return rmsy
 
+def rho(rays,weights=None,cent=False):
+    """
+    Compute distance from centroid for all rays
+    """
+    x,y = rays[1:3]
+    if cent is True:
+        cx,cy = centroid(rays,weights=weights)
+    else:
+        cx,cy = 0,0
+    rho = np.sqrt((x-cx)**2+(y-cy)**2)
+    
+    return rho
+
+def rhocdf(rays,weights=None,cent=True):
+    """
+    Compute the radial CDF of the ray distribution
+    """
+    r = rho(rays,weights=weights,cent=cent)
+    if weights is None:
+        weights = np.repeat(1,len(r))
+    ind = np.argsort(r)
+    weights = weights[ind]
+    r = r[ind]
+    cdf = np.cumsum(weights)
+    cdf = cdf / cdf.max()
+    
+    return r,cdf
+
 def hpd(rays,weights=None):
     """Compute HPD by taking median of radii from centroid"""
-    x,y = rays[1:3]
-    cx,cy = centroid(rays,weights=weights)
-    rho = np.sqrt((x-cx)**2 + (y-cy)**2)
+    r = rho(rays,weights=weights)
     if weights is not None:
-        ind = np.argsort(rho)
-        weights = weights[ind]
-        rho = rho[ind]
-        cdf = np.cumsum(weights)
-        cdf = cdf / cdf.max()
-        hpd = rho[np.argmin(np.abs(cdf-.75))] - \
-              rho[np.argmin(np.abs(cdf-.25))]
+        r,cdf = rhocdf(rays,weights=weights)
+        hpd = r[np.argmin(np.abs(cdf-.75))] - \
+              r[np.argmin(np.abs(cdf-.25))]
     else:
         hpd = np.median(rho)*2.
     return hpd

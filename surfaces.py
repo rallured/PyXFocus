@@ -287,6 +287,16 @@ def wsPrimary(rays,r0,z0,psi):
     wolt.wsprimary(x,y,z,l,m,n,ux,uy,uz,a,z0,psi)
     return
 
+def wsPrimaryB(rays,r0,z0,psi,thick):
+    """Trace a W-S primary surface
+    Fortran function computes Chase parameters for an equivalent W-I
+    betas, f, g, and k computed from alpha and z0
+    """
+    opd,x,y,z,l,m,n,ux,uy,uz = rays
+    a,p,d,e = con.woltparam(r0,z0)
+    wolt.wsprimaryback(x,y,z,l,m,n,ux,uy,uz,a,z0,psi,thick)
+    return
+
 def wsSecondary(rays,r0,z0,psi):
     """Trace a W-S secondary surface
     Fortran function computes Chase parameters for an equivalent W-I
@@ -295,6 +305,16 @@ def wsSecondary(rays,r0,z0,psi):
     opd,x,y,z,l,m,n,ux,uy,uz = rays
     a,p,d,e = con.woltparam(r0,z0)
     wolt.wssecondary(x,y,z,l,m,n,ux,uy,uz,a,z0,psi)
+    return
+
+def wsSecondaryB(rays,r0,z0,psi,thick):
+    """Trace a W-S secondary surface
+    Fortran function computes Chase parameters for an equivalent W-I
+    betas, f, g, and k computed from alpha and z0
+    """
+    opd,x,y,z,l,m,n,ux,uy,uz = rays
+    a,p,d,e = con.woltparam(r0,z0)
+    wolt.wssecondaryback(x,y,z,l,m,n,ux,uy,uz,a,z0,psi,thick)
     return
 
 def spoCone(rays,R0,tg,ind=None):

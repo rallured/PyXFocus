@@ -15,6 +15,10 @@ import inducedPolarization as pol
 
 cons = pol.readNK('/home/rallured/Dropbox/inducedPol/Ir_llnl_cxro.nk')
 
+#N=3 parameters
+R3=861.518490349883
+Rn=1875.3348972647002
+
 def showZetaEffect(zeta=1.,col='b',label=''):
     """
     Trace zeta > 1 and zeta < 1 for a single shell.
@@ -209,7 +213,8 @@ def defineRx(N=3,L=200.,nodegap=25.,rnodes=False,rzeta=False,\
 
 
 def tracePerfectXRS(L=200.,nodegap=50.,Nshell=1e3,energy=1000.,\
-                    rough=1.,offaxis=0.,rrays=False,rnodes=False):
+                    rough=.3,offaxis=0.,rrays=False,rnodes=False,\
+                    rcen=False,R=None):
     """
     Trace rays through a perfect Lynx design where all the shells
     are on the spherical principle surface, with zeta equal to unity.
@@ -288,13 +293,9 @@ def tracePerfectXRS(L=200.,nodegap=50.,Nshell=1e3,energy=1000.,\
         rays = tran.vignette(rays,ind=ind)
         weights = weights[ind]
         previousrho = wsSecrad(z-nodegap/2-L,r,z)+.4
-
-        #Go to focus
-        try:
-            surf.focusI(rays,weights=weights)
-        except:
-            pdb.set_trace()
-
+        tran.transform(rays,0,0,-z+nodegap/2+L,0,0,0)
+        surf.flat(rays)
+        
         #Accumulate master rays
         try:
             mrays = [np.concatenate([mrays[ti],rays[ti]]) for ti in range(10)]
@@ -303,8 +304,18 @@ def tracePerfectXRS(L=200.,nodegap=50.,Nshell=1e3,energy=1000.,\
             mrays = rays
             mweights = weights
 
+    #Go to focus
+    if R is not None:
+        surf.tanSphere(rays,R)
+    else:
+        fz = surf.focusI(rays,weights=weights)
+
+    if rcen is True:
+        return anal.centroid(mrays,weights=mweights)[0],\
+               fz
+
     if rrays is True:
-        return mrays,mweights
+        return mrays,mweights,fz
 
     return anal.hpd(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
            anal.rmsCentroid(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
@@ -392,7 +403,8 @@ def defineNodePositions(smax,pmin,fun,nodegap,L=200.):
     return rsec#,rext
 
 def traceXRS(rsec,smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
-             rough=1.,offaxis=0.,rrays=False):
+             rough=.3,offaxis=0.,rrays=False,rcen=False,\
+             R=None):
     """
     Using output from defineRx, trace the nodes in a Lynx design.
     Provide number of sections, and the zeta as a function of radius
@@ -404,11 +416,14 @@ def traceXRS(rsec,smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
     #Trace through all shells, computing reflectivity and geometric area
     #for each shell
     previousrho = []
+    N = 0
     for i in range(len(smax)):
         #Variable to store radial position of bottom of previous
         #secondary mirror
         previousrho.append(0.)
         for r in rsec[i]:
+            #Shell number
+            N = N + 1
             #Determine zeta for this shell...must be at least .01
             psi = np.polyval(fun[i],r)
             psi = np.max([.01,psi])
@@ -421,6 +436,7 @@ def traceXRS(rsec,smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
 
             #Set up weights (cm^2)
             weights = np.repeat((a1**2-a0**2) * np.pi / 100. / Nshell,Nshell)
+            flag = np.repeat(N,Nshell)
 
             #Trace to primary
             surf.wsPrimary(rays,r,z,psi)
@@ -444,6 +460,7 @@ def traceXRS(rsec,smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
                 pdb.set_trace()
             rays = tran.vignette(rays,ind=ind)
             weights = weights[ind]
+            flag = flag[ind]
 
             #Go to exit aperture and confirm rays don't
             #hit back of previous shell
@@ -459,34 +476,65 @@ def traceXRS(rsec,smax,pmin,fun,nodegap,L=200.,Nshell=1e3,energy=1000.,\
                 #pdb.set_trace()
             rays = tran.vignette(rays,ind=ind)
             weights = weights[ind]
+            flag = flag[ind]
             previousrho.append(wsSecrad(smax[i]-L,r,z,psi=psi)+.4)
 
-            #Go to focus
-            if rrays is False:
-                tran.transform(rays,0,0,-smax[i]+L,0,0,0)
-                surf.flat(rays)
+            #Go back to global coordinate system (focus)
+            tran.transform(rays,0,0,-smax[i]+L,0,0,0)
+            surf.flat(rays)
 
             #Accumulate master rays
             try:
                 mrays = [np.concatenate([mrays[ti],rays[ti]]) for ti in range(10)]
                 mweights = np.concatenate([mweights,weights])
+                mflag = np.concatenate([mflag,flag])
             except:
                 mrays = rays
                 mweights = weights
-
-
-    if rrays is True:
-        return mrays,mweights,previousrho
+                mflag = flag
 
     #Go to focus
-    try:
-        surf.focusI(rays,weights=weights)
-    except:
-        pdb.set_trace()
+    if R is not None:
+        surf.tanSphere(mrays,R)
+    else:
+        fz = surf.focusI(mrays,weights=mweights)
+    
+    if rcen is True:
+        return anal.centroid(mrays,weights=mweights)[0],\
+               fz
+
+    if rrays is True:
+        return mrays,mweights,mflag
 
     return anal.hpd(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
            anal.rmsCentroid(mrays,weights=mweights)/1e4*180/np.pi*60**2,\
            np.sum(mweights)
+
+def defineFocalSurface(rnodes,rx):
+    """
+    Using prescription, determine optimally curved focal surface.
+    """
+    res = np.array([traceXRS(rnodes,*rx,rough=.3,rcen=True,offaxis=a) \
+          for a in np.linspace(-3e-3,3e-3,21)])
+    x,z = res.transpose()
+
+    #Fit parabola
+    fit = np.polyfit(x,z,2)
+
+    return 1./2./fit[0]
+
+def defineNominalSurface():
+    """
+    Using prescription, determine optimally curved focal surface.
+    """
+    res = np.array([tracePerfectXRS(rough=.3,rcen=True,offaxis=a) \
+          for a in np.linspace(-3e-3,3e-3,21)])
+    x,z = res.transpose()
+
+    #Fit parabola
+    fit = np.polyfit(x,z,2)
+
+    return 1./2./fit[0]
 
 def plotNodeSpacing(rsec,smax,pmin,fun,nodegap,L=200.,pbeam=True):
     """
@@ -570,12 +618,22 @@ def traceNode(sec,nodeindex,rsec,smax,pmin,fun,nodegap,L=200.):
 def fullAnalysis():
     angle = np.linspace(0.,3e-3,11)
     energy = np.array([.5,1.,2.,4.,6.,10.])*1000.
-    rx = [defineRx(N=ni,nodegap=50.) for ni in range(3,6)]
-    rnodes = [defineNodePositions(*r) for r in rx]
-    res = [[[traceXRS(rsec,*r,energy=e,rough=.3,offaxis=ang) \
-          for rsec,r in zip(rnodes,rx)] for e in energy] \
+
+    #Variable Zeta
+    rx = defineRx(N=3,nodegap=50.)
+    rnodes = defineNodePositions(*rx)
+    R = defineFocalSurface(rnodes,rx)
+    res = [[traceXRS(rnodes,*rx,energy=e,rough=.3,offaxis=ang,R=R) \
+           for e in energy] \
            for ang in angle]
-    return rx,rnodes,res
+
+    #Nominal
+    Rn = defineNominalSurface()
+    res0 = [[tracePerfectXRS(energy=e,rough=.3,offaxis=ang,R=R) \
+            for e in energy] \
+            for ang in angle]
+    
+    return rx,rnodes,R,np.array(res),Rn,np.array(res0)
 
 """
 Factors to consider for this project:
