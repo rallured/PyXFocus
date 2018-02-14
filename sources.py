@@ -1,5 +1,13 @@
-import numpy as np
+#This module creates ray lists of the form [opd,x,y,z,l,m,n,ux,uy,uz]
+#opd is a vector tracking the optical path traveled by each ray
+#Only surfaces with an OPD flag in their definition will update the
+#opd vector.
+#x,y,z indicate the ray position
+#l,m,n indicate the ray direction cosines
+#ux,uy,uz indicate the surface normal of the last surface to which
+#the ray was traced
 
+import numpy as np
 
 def pointsource(ang, num):
     '''
