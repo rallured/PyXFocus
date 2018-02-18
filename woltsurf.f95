@@ -456,6 +456,7 @@ subroutine wsprimary(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi)
         x(i) = xi
         y(i) = yi
         z(i) = zi
+        c = 1000
       end if
       c = c + 1
       !read *, dum
@@ -563,6 +564,7 @@ subroutine wssecondary(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi)
         x(i) = xi
         y(i) = yi
         z(i) = zi
+        c = 1000
       end if
       !print *, x(i),y(i),z(i)
       !print *, F
@@ -794,6 +796,7 @@ subroutine wsprimaryBack(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi,thick)
         x(i) = xi
         y(i) = yi
         z(i) = zi
+        c = 1000
       end if
       c = c + 1
       !read *, dum
@@ -906,6 +909,7 @@ subroutine wssecondaryBack(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi,thick)
         x(i) = xi
         y(i) = yi
         z(i) = zi
+        c = 1000
       end if
       !print *, x(i),y(i),z(i)
       !print *, F
