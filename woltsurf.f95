@@ -391,7 +391,7 @@ subroutine wsprimary(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi)
   real*8 , intent(inout) :: x(num),y(num),z(num),l(num),m(num),n(num),ux(num),uy(num),uz(num)
   real*8, intent(in) :: alpha,z0,psi
   real*8 :: k,kterm,dbdx,dbdy,beta,betas,ff,g,r
-  real*8 :: F,Fx,Fy,Fz,Fp,delt,dum,Fb
+  real*8 :: F,Fx,Fy,Fz,Fp,delt,dum,Fb,xi,yi,zi
   integer :: i, flag, c
 
   !Compute Chase parameters
@@ -401,10 +401,14 @@ subroutine wsprimary(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi)
   k = tan(betas/2)**2
 
   !Loop through rays and trace to mirror
-  !$omp parallel do private(i,delt,F,Fx,Fy,Fz,Fp,Fb,kterm,beta,dbdx,dbdy,flag,r)
+  !$omp parallel do private(i,delt,F,Fx,Fy,Fz,Fp,Fb,kterm,beta,dbdx,dbdy,flag,r,xi,yi,zi)
   do i=1,num
     delt = 100.
     c = 0
+    !Initial ray position
+    xi = x(i)
+    yi = y(i)
+    zi = z(i)
     do while(abs(delt)>1.e-8)
       beta = asin(sqrt(x(i)**2 + y(i)**2)/ff)
       flag = 0
@@ -437,25 +441,32 @@ subroutine wsprimary(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi)
       Fy = Fb * dbdy
       Fp = Fx*l(i) + Fy*m(i) + Fz*n(i)
       delt = -F/Fp
-      !print *, x(i),y(i),z(i)
-      !print *, F, Fx, Fy, Fz
-      !print *, kterm, Fb, flag,k,tan(beta/2)**2
+      !if (isnan(delt)) then
+      !  print *, c,x(i),y(i),z(i)
+      !  print *, F, Fx, Fy, Fz
+      !  print *, kterm, Fb, flag,k,tan(beta/2)**2
+      !  print *, betas,ff
+      !  read *, dum
+      !end if
       x(i) = x(i) + l(i)*delt
       y(i) = y(i) + m(i)*delt
       z(i) = z(i) + n(i)*delt
-      if (c > 10) then
+      if (c > 25 .or. isnan(delt)) then
         delt = 0.
-        l(i) = 0.
-        m(i) = 0.
-        n(i) = 0.
+        x(i) = xi
+        y(i) = yi
+        z(i) = zi
+        c = 1000
       end if
       c = c + 1
       !read *, dum
     end do
-    Fp = sqrt(Fx*Fx+Fy*Fy+Fz*Fz)
-    ux(i) = -Fx/Fp
-    uy(i) = -Fy/Fp
-    uz(i) = -Fz/Fp
+    if (c < 26) then
+      Fp = sqrt(Fx*Fx+Fy*Fy+Fz*Fz)
+      ux(i) = -Fx/Fp
+      uy(i) = -Fy/Fp
+      uz(i) = -Fz/Fp
+    end if
     !print *, x(i),y(i),z(i)
     !print *, ux(i),uy(i),uz(i)
     !read *, dum
@@ -478,7 +489,7 @@ subroutine wssecondary(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi)
   real*8, intent(in) :: alpha,z0,psi
   real*8 :: k,kterm,dbdx,dbdy,dbdz,dadb,beta,betas,ff,g,d,a
   real*8 :: gam,dbdzs,dadbs
-  real*8 :: F,Fx,Fy,Fz,Fp,delt,dum,Fb
+  real*8 :: F,Fx,Fy,Fz,Fp,delt,dum,Fb,xi,yi,zi
   integer :: i, flag, c
 
   !Compute Chase parameters
@@ -488,10 +499,14 @@ subroutine wssecondary(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi)
   k = tan(betas/2)**2
 
   !Loop through rays and trace to mirror
-  !$omp parallel do private(i,delt,F,Fx,Fy,Fz,Fp,Fb,kterm,beta,dbdx,dbdy,dbdz,flag,c,a,dadbs,dbdzs,gam,dadb)
+  !$omp parallel do private(i,delt,F,Fx,Fy,Fz,Fp,Fb,kterm,beta,dbdx,dbdy,dbdz,flag,c,a,dadbs,dbdzs,gam,dadb,xi,yi,zi)
   do i=1,num
     delt = 100.
     c = 0
+    !Initial ray position
+    xi = x(i)
+    yi = y(i)
+    zi = z(i)
     do while(abs(delt)>1.e-8)
       beta = atan2(sqrt(x(i)**2 + y(i)**2),z(i))
       flag = 0
@@ -544,11 +559,12 @@ subroutine wssecondary(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi)
       x(i) = x(i) + l(i)*delt
       y(i) = y(i) + m(i)*delt
       z(i) = z(i) + n(i)*delt
-      if (c > 10) then
+      if (c > 25 .or. isnan(delt)) then
         delt = 0.
-        l(i) = 0.
-        m(i) = 0.
-        n(i) = 0.
+        x(i) = xi
+        y(i) = yi
+        z(i) = zi
+        c = 1000
       end if
       !print *, x(i),y(i),z(i)
       !print *, F
@@ -556,10 +572,12 @@ subroutine wssecondary(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi)
       !read *, dum
       c = c+1
     end do
-    Fp = sqrt(Fx*Fx+Fy*Fy+Fz*Fz)
-    ux(i) = Fx/Fp
-    uy(i) = Fy/Fp
-    uz(i) = Fz/Fp
+    if (c < 26) then
+      Fp = sqrt(Fx*Fx+Fy*Fy+Fz*Fz)
+      ux(i) = Fx/Fp
+      uy(i) = Fy/Fp
+      uz(i) = Fz/Fp
+    end if
     !print *, x(i),y(i),z(i)
     !print *, ux(i),uy(i),uz(i)
     !print *, F, Fx, Fy, Fz
@@ -712,7 +730,7 @@ subroutine wsprimaryBack(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi,thick)
   real*8 , intent(inout) :: x(num),y(num),z(num),l(num),m(num),n(num),ux(num),uy(num),uz(num)
   real*8, intent(in) :: alpha,z0,psi,thick
   real*8 :: k,kterm,dbdx,dbdy,beta,betas,ff,g,r,theta,x2,y2
-  real*8 :: F,Fx,Fy,Fz,Fp,delt,dum,Fb
+  real*8 :: F,Fx,Fy,Fz,Fp,delt,dum,Fb,xi,yi,zi
   integer :: i, flag, c
 
   !Compute Chase parameters
@@ -722,10 +740,14 @@ subroutine wsprimaryBack(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi,thick)
   k = tan(betas/2)**2
 
   !Loop through rays and trace to mirror
-  !$omp parallel do private(i,delt,F,Fx,Fy,Fz,Fp,Fb,kterm,beta,dbdx,dbdy,flag,r,x2,y2,theta)
+  !$omp parallel do private(i,delt,F,Fx,Fy,Fz,Fp,Fb,kterm,beta,dbdx,dbdy,flag,r,x2,y2,theta,xi,yi,zi)
   do i=1,num
     delt = 100.
     c = 0
+    !Initial ray position
+    xi = x(i)
+    yi = y(i)
+    zi = z(i)
     do while(abs(delt)>1.e-8)
       !Adjust x and y positions
       r = sqrt(x(i)**2+y(i)**2)
@@ -769,19 +791,22 @@ subroutine wsprimaryBack(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi,thick)
       x(i) = x(i) + l(i)*delt
       y(i) = y(i) + m(i)*delt
       z(i) = z(i) + n(i)*delt
-      if (c > 10) then
+      if (c > 25 .or. isnan(delt)) then
         delt = 0.
-        l(i) = 0.
-        m(i) = 0.
-        n(i) = 0.
+        x(i) = xi
+        y(i) = yi
+        z(i) = zi
+        c = 1000
       end if
       c = c + 1
       !read *, dum
     end do
-    Fp = sqrt(Fx*Fx+Fy*Fy+Fz*Fz)
-    ux(i) = -Fx/Fp
-    uy(i) = -Fy/Fp
-    uz(i) = -Fz/Fp
+    if (c < 26) then
+      Fp = sqrt(Fx*Fx+Fy*Fy+Fz*Fz)
+      ux(i) = -Fx/Fp
+      uy(i) = -Fy/Fp
+      uz(i) = -Fz/Fp
+    end if
     !print *, x(i),y(i),z(i)
     !print *, ux(i),uy(i),uz(i)
     !read *, dum
@@ -804,7 +829,7 @@ subroutine wssecondaryBack(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi,thick)
   real*8, intent(in) :: alpha,z0,psi,thick
   real*8 :: k,kterm,dbdx,dbdy,dbdz,dadb,beta,betas,ff,g,d,a,r,theta,x2,y2
   real*8 :: gam,dbdzs,dadbs
-  real*8 :: F,Fx,Fy,Fz,Fp,delt,dum,Fb
+  real*8 :: F,Fx,Fy,Fz,Fp,delt,dum,Fb,xi,yi,zi
   integer :: i, flag, c
 
   !Compute Chase parameters
@@ -814,10 +839,14 @@ subroutine wssecondaryBack(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi,thick)
   k = tan(betas/2)**2
 
   !Loop through rays and trace to mirror
-  !$omp parallel do private(i,delt,F,Fx,Fy,Fz,Fp,Fb,kterm,beta,dbdx,dbdy,dbdz,flag,c,a,dadbs,dbdzs,gam,dadb,r,theta,x2,y2)
+  !$omp parallel do private(i,delt,F,Fx,Fy,Fz,Fp,Fb,kterm,beta,dbdx,dbdy,dbdz,flag,c,a,dadbs,dbdzs,gam,dadb,r,theta,x2,y2,xi,yi,zi)
   do i=1,num
     delt = 100.
     c = 0
+    !Initial ray position
+    xi = x(i)
+    yi = y(i)
+    zi = z(i)
     do while(abs(delt)>1.e-8)
       !Adjust x and y positions
       r = sqrt(x(i)**2 + y(i)**2)
@@ -875,11 +904,12 @@ subroutine wssecondaryBack(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi,thick)
       x(i) = x(i) + l(i)*delt
       y(i) = y(i) + m(i)*delt
       z(i) = z(i) + n(i)*delt
-      if (c > 10) then
+      if (c > 25 .or. isnan(delt)) then
         delt = 0.
-        l(i) = 0.
-        m(i) = 0.
-        n(i) = 0.
+        x(i) = xi
+        y(i) = yi
+        z(i) = zi
+        c = 1000
       end if
       !print *, x(i),y(i),z(i)
       !print *, F
@@ -887,10 +917,12 @@ subroutine wssecondaryBack(x,y,z,l,m,n,ux,uy,uz,num,alpha,z0,psi,thick)
       !read *, dum
       c = c+1
     end do
-    Fp = sqrt(Fx*Fx+Fy*Fy+Fz*Fz)
-    ux(i) = Fx/Fp
-    uy(i) = Fy/Fp
-    uz(i) = Fz/Fp
+    if (c < 26) then
+      Fp = sqrt(Fx*Fx+Fy*Fy+Fz*Fz)
+      ux(i) = Fx/Fp
+      uy(i) = Fy/Fp
+      uz(i) = Fz/Fp
+    end if
     !print *, x(i),y(i),z(i)
     !print *, ux(i),uy(i),uz(i)
     !print *, F, Fx, Fy, Fz
