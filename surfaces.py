@@ -278,44 +278,76 @@ def primaryLLtan(rays,r0,z0,zmax,zmin,dphi,coeff,axial,az):
     transform(0,0,0,np.pi/2+alpha,0,0)
     return
 
-def wsPrimary(rays,r0,z0,psi):
+def wsPrimary(rays,r0,z0,psi,check=False):
     """Trace a W-S primary surface
     Fortran function computes Chase parameters for an equivalent W-I
     betas, f, g, and k computed from alpha and z0
+    If check is True, function will check for rays that fail
+    to converge to surface
     """
     opd,x,y,z,l,m,n,ux,uy,uz = rays
     a,p,d,e = con.woltparam(r0,z0)
+    if check is True:
+        x0,y0,z0 = np.copy([x,y,z,])
     wolt.wsprimary(x,y,z,l,m,n,ux,uy,uz,a,z0,psi)
+    if check is True:
+        fail = np.logical_and(x0==x,\
+                              np.logical_and(y0==y,z0==z))
+        return fail
     return
 
-def wsPrimaryB(rays,r0,z0,psi,thick):
+def wsPrimaryB(rays,r0,z0,psi,thick,check=False):
     """Trace a W-S primary surface
     Fortran function computes Chase parameters for an equivalent W-I
     betas, f, g, and k computed from alpha and z0
+    If check is True, function will check for rays that fail
+    to converge to surface
     """
     opd,x,y,z,l,m,n,ux,uy,uz = rays
     a,p,d,e = con.woltparam(r0,z0)
+    if check is True:
+        x0,y0,z0 = np.copy([x,y,z,])
     wolt.wsprimaryback(x,y,z,l,m,n,ux,uy,uz,a,z0,psi,thick)
+    if check is True:
+        fail = np.logical_and(x0==x,\
+                              np.logical_and(y0==y,z0==z))
+        return fail
     return
 
-def wsSecondary(rays,r0,z0,psi):
+def wsSecondary(rays,r0,z0,psi,check=False):
     """Trace a W-S secondary surface
     Fortran function computes Chase parameters for an equivalent W-I
     betas, f, g, and k computed from alpha and z0
+    If check is True, function will check for rays that fail
+    to converge to surface
     """
     opd,x,y,z,l,m,n,ux,uy,uz = rays
     a,p,d,e = con.woltparam(r0,z0)
+    if check is True:
+        x0,y0,z0 = np.copy([x,y,z,])
     wolt.wssecondary(x,y,z,l,m,n,ux,uy,uz,a,z0,psi)
+    if check is True:
+        fail = np.logical_and(x0==x,\
+                              np.logical_and(y0==y,z0==z))
+        return fail
     return
 
-def wsSecondaryB(rays,r0,z0,psi,thick):
+def wsSecondaryB(rays,r0,z0,psi,thick,check=False):
     """Trace a W-S secondary surface
     Fortran function computes Chase parameters for an equivalent W-I
     betas, f, g, and k computed from alpha and z0
+    If check is True, function will check for rays that fail
+    to converge to surface
     """
     opd,x,y,z,l,m,n,ux,uy,uz = rays
     a,p,d,e = con.woltparam(r0,z0)
+    if check is True:
+        x0,y0,z0 = np.copy([x,y,z,])
     wolt.wssecondaryback(x,y,z,l,m,n,ux,uy,uz,a,z0,psi,thick)
+    if check is True:
+        fail = np.logical_and(x0==x,\
+                              np.logical_and(y0==y,z0==z))
+        return fail
     return
 
 def spoCone(rays,R0,tg,ind=None):
