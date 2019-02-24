@@ -1,3 +1,5 @@
+include 'specialFunctions.f95'
+
 !Trace rays to local XY plane
 subroutine flat(x,y,z,l,m,n,ux,uy,uz,num)
   !Declarations
@@ -636,3 +638,33 @@ subroutine conicplusopd(opd,x,y,z,l,m,n,ux,uy,uz,num,R,K,p,Np,nr)
 
 
 end subroutine conicplusopd
+
+!Trace a surface defined by a 2D Legendre phase function
+!xwidth and ywidth are halfwidths (redefining [-1,1] to [-xwidth,xwidth]
+subroutine legSurf(x,y,z,l,m,n,ux,uy,uz,xwidth,ywidth,order,coeff,xo,yo,Nc,num)
+  !Declarations
+  implicit none
+  integer, intent(in) :: num,Nc
+  real*8 , intent(inout) :: x(num),y(num),z(num),l(num),m(num),n(num),ux(num),uy(num),uz(num)
+  real*8, intent(in) :: coeff(Nc),xwidth,ywidth,order
+  integer, intent(in) :: xo(Nc),yo(Nc)
+  real*8 :: dphidx,dphidy,legendre,legendrep,dum
+  integer :: i,j
+
+  !Loop through rays and apply appropriate perturbations to cosines
+  !$omp parallel do private(dphidx,dphidy)
+  do i=1,num
+    dphidx = 0;
+    dphidy = 0;
+    do j=1,Nc
+      !Compute Legendre derivatives at x,y location
+      dphidx = dphidx + coeff(j)*legendre(y(i)/ywidth,yo(j))*legendrep(x(i)/xwidth,xo(j))
+      dphidy = dphidy + coeff(j)*legendrep(y(i)/ywidth,yo(j))*legendre(x(i)/xwidth,xo(j))
+    end do
+    l(i) = l(i) + dphidx*order
+    m(i) = m(i) + dphidy*order
+    n(i) = n(i)/abs(n(i)) * sqrt(1.-l(i)**2-m(i)**2)
+  end do
+  !$omp end parallel do
+
+end subroutine legSurf

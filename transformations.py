@@ -170,6 +170,12 @@ def vignette(rays,ind=None):
     return [rays[i][ind] for i in range(10)]
 
 #Transformation matrix helper functions
+def newCoords():
+    """
+    Return identity matrices to establish a coordinate system
+    """
+    return [tr.identity_matrix()]*4
+
 def rotationM(rx,ry,rz,inverse=False):
     """Return a rotation matrix, applying rotations in
     X,Y,Z order

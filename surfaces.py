@@ -166,6 +166,19 @@ def paraxialY(rays,F):
     surf.paraxialy(x,y,z,l,m,n,ux,uy,uz,F)
     return
 
+def legSurf(rays,xwidth,ywidth,order,coeff,xo,yo):
+    """
+    Diffract rays from a phase surface defined by 2D Legendre coefficients.
+    coeff is the phase function in length units (mm)
+    xo,yo are the Legendre orders in the x and y directions
+    Rays are assumed to have been traced to the x,y plane prior to this call.
+    Need to confirm proper behavior
+    """
+    x,y,z,l,m,n,ux,uy,uz = rays[1:]
+    surf.legsurf(x,y,z,l,m,n,ux,uy,uz,xwidth,ywidth,order,\
+                 coeff.flatten(),xo.flatten(),yo.flatten())
+    return
+
 def wolterprimary(rays,r0,z0,psi=1.,nr=None):
     """Wrapper for Wolter primary surface - no vignetting
     """

@@ -6,6 +6,7 @@ import pdb
 from utilities.imaging.fitting import circle,circleMerit
 from utilities.imaging.analysis import ptov,rms
 import utilities.imaging.man as man
+import utilities.imaging.fitting as fit
 import PyXFocus.reconstruct as reconstruct
 
 def centroid(rays,weights=None):
@@ -74,7 +75,7 @@ def hpd(rays,weights=None):
         hpd = r[np.argmin(np.abs(cdf-.75))] - \
               r[np.argmin(np.abs(cdf-.25))]
     else:
-        hpd = np.median(rho)*2.
+        hpd = np.median(r)*2.
     return hpd
 
 def hpdY(rays,weights=None):
@@ -168,7 +169,7 @@ def grazeAngle(rays,ind = None):
     return np.pi/2 - indAngle(rays,ind = ind)
 
 def interpolateVec(rays,I,Nx,Ny,xr=None,yr=None,method='linear',\
-                   polar=False):
+                   polar=False,interpVec=None):
     """
     Interpolate a ray vector onto a 2D grid based on the X and Y
     positions of the rays. Assume that the rays randomly fill a
@@ -181,7 +182,8 @@ def interpolateVec(rays,I,Nx,Ny,xr=None,yr=None,method='linear',\
     """
     #Unpack needed vectors
     x,y = rays[1:3]
-    interpVec = rays[I]
+    if interpVec is None:
+        interpVec = rays[I]
     
     #Set up new grid
     if xr is None:
@@ -207,6 +209,31 @@ def interpolateVec(rays,I,Nx,Ny,xr=None,yr=None,method='linear',\
         res = griddata((x,y),interpVec,(gridx,gridy),method=method)
     
     return res,dx,dy
+
+def measureOPD(rays,point):
+    """
+    Measure distance in mm from rays to point
+    Returns a vector of distances
+    """
+    if len(point)==10:
+        return np.sqrt((rays[1]-point[1])**2+\
+                       (rays[2]-point[2])**2+\
+                       (rays[3]-point[3])**2)
+    else:
+        return np.sqrt((rays[1]-point[0])**2+\
+                       (rays[2]-point[1])**2+\
+                       (rays[3]-point[2])**2)
+
+def OPDtoLegendre(x,y,opd,xo,yo,xwidth=1,ywidth=1):
+    """
+    Fit Legendre coefficients over ray XY plane to OPD.
+    """
+    #Perform Legendre fitting
+    res = fit.legendre2d(opd,x=x/xwidth,y=y/ywidth,xo=xo,yo=yo)
+    #Construct order arrays
+    coeff = res[1]
+    [xorder,yorder] = np.meshgrid(range(xo+1),range(yo+1))
+    return coeff,xorder,yorder
 
 def wavefront(rays,Nx,Ny,method='cubic',polar=False):
     """
