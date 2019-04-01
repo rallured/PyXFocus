@@ -661,8 +661,8 @@ subroutine legSurf(x,y,z,l,m,n,ux,uy,uz,xwidth,ywidth,order,coeff,xo,yo,Nc,num)
       dphidx = dphidx + coeff(j)*legendre(y(i)/ywidth,yo(j))*legendrep(x(i)/xwidth,xo(j))
       dphidy = dphidy + coeff(j)*legendrep(y(i)/ywidth,yo(j))*legendre(x(i)/xwidth,xo(j))
     end do
-    l(i) = l(i) + dphidx*order
-    m(i) = m(i) + dphidy*order
+    l(i) = l(i) + dphidx*order/xwidth
+    m(i) = m(i) + dphidy*order/ywidth
     n(i) = n(i)/abs(n(i)) * sqrt(1.-l(i)**2-m(i)**2)
   end do
   !$omp end parallel do

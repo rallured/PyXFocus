@@ -142,6 +142,32 @@ def radgrat(rays,dpermm,order,wave,ind=None):
         fn(x,y,l,m,n,wave,dpermm,order)
     return
 
+def radgratcenter(rays,dpermm,order,wave,hubdist,ind=None):
+    """Infinite radial grating. Assumes grating in x,y plane
+    with grooves converging at hubdist in positive y direction
+    Grating placed with origin at center of grating
+    dpermm is nm/mm
+    wave is in nm
+    hubdist in mm
+    """
+    x,y,z,l,m,n = rays[1:7]
+    #Choose correct radgrat function
+    if type(wave) == np.ndarray:
+        fn = tran.radgratw
+    else:
+        fn = tran.radgratcenter
+    if ind is not None:
+        tx,ty,tl,tm,tn = x[ind],y[ind],l[ind],m[ind],n[ind]
+        if np.size(wave)==1:
+            tw = wave
+        else:
+            tw = wave[ind]
+        fn(tx,ty,tl,tm,tn,tw,dpermm,order,hubdist)
+        x[ind],y[ind],l[ind],m[ind],n[ind] = tx,ty,tl,tm,tn
+    else:
+        fn(x,y,l,m,n,wave,dpermm,order,hubdist)
+    return
+
 def grat(rays,d,order,wave,ind=None):
     """Linear grating with groove direction in +y
     Evanescence results in position vector set to zero

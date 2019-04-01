@@ -7,7 +7,10 @@ from utilities.imaging.fitting import circle,circleMerit
 from utilities.imaging.analysis import ptov,rms
 import utilities.imaging.man as man
 import utilities.imaging.fitting as fit
+import utilities.imaging.zernikemod as zern
 import PyXFocus.reconstruct as reconstruct
+import astropy.io.fits as pyfits
+import PyXFocus.specialfunctions as special
 
 def centroid(rays,weights=None):
     """Compute the centroid of the rays in the xy plane
@@ -23,6 +26,20 @@ def rmsCentroid(rays,weights=None):
     x,y = rays[1:3]
     cx,cy = centroid(rays,weights=weights)
     rho = (x-cx)**2 + (y-cy)**2
+    return np.sqrt(np.average(rho,weights=weights))
+
+def rmsPoint(rays,point,weights=None):
+    """
+    Compute the RMS of rays about a point
+    """
+    if np.size(point) == 10:
+        rho = (rays[1]-point[1])**2 + \
+              (rays[2]-point[2])**2 + \
+              (rays[3]-point[3])**2
+    else:
+        rho = (rays[1]-point[0])**2 + \
+              (rays[2]-point[1])**2 + \
+              (rays[3]-point[2])**2
     return np.sqrt(np.average(rho,weights=weights))
 
 def rmsX(rays,weights=None):
@@ -224,7 +241,7 @@ def measureOPD(rays,point):
                        (rays[2]-point[1])**2+\
                        (rays[3]-point[2])**2)
 
-def OPDtoLegendre(x,y,opd,xo,yo,xwidth=1,ywidth=1):
+def OPDtoLegendre(x,y,opd,xo,yo,xwidth=1.,ywidth=1.):
     """
     Fit Legendre coefficients over ray XY plane to OPD.
     """
@@ -234,6 +251,47 @@ def OPDtoLegendre(x,y,opd,xo,yo,xwidth=1,ywidth=1):
     coeff = res[1]
     [xorder,yorder] = np.meshgrid(range(xo+1),range(yo+1))
     return coeff,xorder,yorder
+
+def OPDtoLegendreP(x,y,opd,xo,yo,xwidth=1.,ywidth=1.):
+    """
+    Fit Legendre coefficients over ray XY plane to OPD.
+    Return the derivatives in both axes
+    """
+    #Perform Legendre fitting
+    res = fit.legendre2d(opd,x=x/xwidth,y=y/ywidth,xo=xo,yo=yo)
+    #Construct order arrays
+    coeff = res[1]
+    [xorder,yorder] = np.meshgrid(range(xo+1),range(yo+1))
+    #Construct the derivatives using the special function module
+    cx = np.polynomial.legendre.legder(res[1],axis=0)
+    cy = np.polynomial.legendre.legder(res[1],axis=1)
+    #gy = np.polynomial.legendre.legval2d(x/xwidth,y/ywidth,cx)/xwidth
+    #gx = np.polynomial.legendre.legval2d(x/xwidth,y/ywidth,cy)/ywidth
+    gy = np.polynomial.legendre.legval2d(-y/ywidth,x/xwidth,cx)/xwidth
+    gx = np.polynomial.legendre.legval2d(-y/ywidth,x/xwidth,cy)/ywidth
+    
+    return gx,gy
+
+def OPDtoSqZernike(x,y,opd,N,xwidth=1.,ywidth=1.):
+    """
+    Fit Square Zernike coefficients over ray XY plane to OPD.
+    """
+    #First determine standard Zernike coefficients
+    res = zern.fitvec(x/xwidth,y/ywidth,opd,N=N)
+    #Convert to square Zernikes using precomputed transformation matrix
+    sqcoef = np.dot(np.linalg.inv(zern.sqtost[:N,:N]),res[0])
+    return sqcoef
+
+def SqZerniketoOPD(x,y,coef,N,xwidth=1.,ywidth=1.):
+    """
+    Return an OPD vector based on a set of square Zernike coefficients
+    """
+    stcoef = np.dot(zern.sqtost[:N,:N],coef)
+    x = x/xwidth
+    y = y/ywidth
+    zm = zern.zmatrix(np.sqrt(x**2+y**2),np.arctan2(y,x),N)
+    opd = np.dot(zm,stcoef)
+    return opd
 
 def wavefront(rays,Nx,Ny,method='cubic',polar=False):
     """
@@ -332,3 +390,30 @@ def compareOPDandSlopes(rays,Nx,Ny,method='linear'):
     print 'Y Diff:' + str(np.sqrt(np.nanmean((gradx-m)**2)))
     
     return
+
+def radialGrad(x,y,hubscale,yaw,hubdist):
+    """
+    Compute the x and y derivatives of a radial grating phase function.
+    hubscale is lambda/(nn/mm)
+    Phase derivatives are:
+    gx = alpha*(cos(theta)/rho)
+    gy = -alpha*(sin(theta)/rho)
+    """
+    #Rotate coordinate system based on yaw angle
+    x2 = x*np.cos(yaw)+y*np.sin(yaw)
+    y2 = -x*np.sin(yaw)+y*np.cos(yaw)
+
+    #Shift y2 axis by hubdistance
+    y2 = y2+hubdist
+
+    #Compute rho and theta
+    rho = np.sqrt(x2**2+y2**2)
+    theta = np.arctan2(-x2,y2)
+    
+    #Compute derivatives
+    gx = hubscale * (np.cos(theta)/rho)
+    gy = -hubscale * (np.sin(theta)/rho)
+
+    return gx,gy
+
+
