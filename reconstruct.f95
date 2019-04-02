@@ -1,6 +1,6 @@
-subroutine reconstruct(xang,yang,xdim,ydim,criteria,h,phase,phasec)
+subroutine reconstruct(xang,yang,xdim,ydim,criteria,h,phase,phasec,maxiter)
     !Declarations
-    integer, intent(in) :: xdim,ydim
+    integer, intent(in) :: xdim,ydim,maxiter
     real*8, dimension(xdim,ydim), intent(inout) :: xang,yang,phase
     !real*8, dimension(xdim,ydim) :: xang,yang,phaseo
     real*8, intent(in) :: criteria,h
@@ -117,7 +117,7 @@ subroutine reconstruct(xang,yang,xdim,ydim,criteria,h,phase,phasec)
         end if
 
         counter = counter + 1
-        if (counter > 1000) then
+        if (counter > maxiter) then
             exit
         end if
 
