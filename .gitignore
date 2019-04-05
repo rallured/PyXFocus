@@ -8,5 +8,5 @@
 *.DS_Store
 *.xml
 *.iml
-# Ignore files for ipython/jupyter notebook and lab.
+# Ignore files for ipython/jupyter notebook and jupyter lab.
 .ipynb_checkpoints/*
