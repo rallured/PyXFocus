@@ -1,13 +1,21 @@
-#This module creates ray lists of the form [opd,x,y,z,l,m,n,ux,uy,uz]
-#opd is a vector tracking the optical path traveled by each ray
-#Only surfaces with an OPD flag in their definition will update the
-#opd vector.
-#x,y,z indicate the ray position
-#l,m,n indicate the ray direction cosines
-#ux,uy,uz indicate the surface normal of the last surface to which
-#the ray was traced
+'''
+Functions in this module create rays emenating from a variety
+of sources in the form [opd, x, y, z, l, m, n, ux, uy, uz].
+
+Ray Parameters:
+    * opd : vector tracking the optical path traveled by each ray;
+            only surfaces with an OPD flag in their definition will
+            update this vector.
+    * x, y, z : ray positions in the Cartesian coordinate system [mm].
+    * l, m, n : ray direction cosines, indicating the direction in which
+            each ray is moving; magnitude is unity.
+    * ux, uy, uz : the surface normal of the last surface to which the
+            ray was traced; magnitude is unity.
+
+'''
 
 import numpy as np
+
 
 def pointsource(ang, num):
     '''
@@ -23,9 +31,9 @@ def pointsource(ang, num):
         Number of rays to create.
 
     Returns
-    -------
+    -----
     rays : list
-        List of ray parameters (opd, x, y, z, l, m, n, ux, uy, uz).
+        List of ray parameters [opd, x, y, z, l, m, n, ux, uy, uz].
 
     '''
     # Radial direction cosine magnitude
@@ -61,7 +69,7 @@ def circularbeam(rad, num):
     Returns
     -------
     rays : list
-        List of ray parameters (opd, x, y, z, l, m, n, ux, uy, uz).
+        List of ray parameters [opd, x, y, z, l, m, n, ux, uy, uz].
 
     '''
     rho = np.sqrt(np.random.rand(num))*rad
@@ -97,10 +105,10 @@ def annulus(rin, rout, num, zhat=-1.):
     zhat : float
         Direction in which rays point. Default is zhat = -1.
 
-    Returns
+    Returns`
     -------
     rays : list
-        List of ray parameters (opd, x, y, z, l, m, n, ux, uy, uz).
+        List of ray parameters [opd, x, y, z, l, m, n, ux, uy, uz].
 
     '''
     rho = np.sqrt(rin**2+np.random.rand(num)*(rout**2-rin**2))
@@ -143,7 +151,7 @@ def subannulus(rin, rout, dphi, num, zhat=1.):
     Returns
     -------
     rays : list
-        List of ray parameters (opd, x, y, z, l, m, n, ux, uy, uz).
+        List of ray parameters [opd, x, y, z, l, m, n, ux, uy, uz].
 
     '''
     rho = np.sqrt(rin**2+np.random.rand(num)*(rout**2-rin**2))
@@ -182,7 +190,7 @@ def xslit(xin, xout, num, zhat=-1.):
     Returns
     -------
     rays : list
-        List of ray parameters (opd, x, y, z, l, m, n, ux, uy, uz).
+        List of ray parameters [opd, x, y, z, l, m, n, ux, uy, uz].
 
     '''
     x = np.linspace(xin, xout, num)
@@ -220,7 +228,7 @@ def rectArray(xsize, ysize, num):
     Returns
     -------
     rays : list
-        List of ray parameters (opd, x, y, z, l, m, n, ux, uy, uz).
+        List of ray parameters [opd, x, y, z, l, m, n, ux, uy, uz].
 
     '''
     x, y = np.meshgrid(np.linspace(-xsize, xsize, num),
@@ -267,7 +275,7 @@ def convergingbeam(zset, rin, rout, tmin, tmax, num, lscat):
     Returns
     -------
     rays : list
-        List of ray parameters (opd, x, y, z, l, m, n, ux, uy, uz).
+        List of ray parameters [opd, x, y, z, l, m, n, ux, uy, uz].
 
     '''
     rho = np.sqrt(rin**2+np.random.rand(num)*(rout**2-rin**2))
@@ -316,7 +324,7 @@ def convergingbeam2(zset, xmin, xmax, ymin, ymax, num, lscat):
     Returns
     -------
     rays : list
-        List of ray parameters (opd, x, y, z, l, m, n, ux, uy, uz).
+        List of ray parameters [opd, x, y, z, l, m, n, ux, uy, uz].
 
     '''
     x = xmin + np.random.rand(num)*(xmax-xmin)
@@ -354,7 +362,7 @@ def rectbeam(xhalfwidth, yhalfwidth, num):
     Returns
     -------
     rays : list
-        List of ray parameters (opd, x, y, z, l, m, n, ux, uy, uz).
+        List of ray parameters [opd, x, y, z, l, m, n, ux, uy, uz].
 
     '''
     x = (np.random.rand(num)-.5)*2*xhalfwidth
