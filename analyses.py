@@ -270,7 +270,7 @@ def OPDtoLegendreP(x,y,opd,xo,yo,xwidth=1.,ywidth=1.):
     gy = np.polynomial.legendre.legval2d(-y/ywidth,x/xwidth,cx)/xwidth
     gx = np.polynomial.legendre.legval2d(-y/ywidth,x/xwidth,cy)/ywidth
     
-    return gx,gy
+    return coeff,xorder,yorder,gx,gy
 
 def OPDtoSqZernike(x,y,opd,N,xwidth=1.,ywidth=1.):
     """
@@ -400,11 +400,10 @@ def radialGrad(x,y,hubscale,yaw,hubdist):
     gy = -alpha*(sin(theta)/rho)
     """
     #Rotate coordinate system based on yaw angle
-    x2 = x*np.cos(yaw)+y*np.sin(yaw)
-    y2 = -x*np.sin(yaw)+y*np.cos(yaw)
-
+    x2,y2 = x*np.cos(yaw)+y*np.sin(yaw),-x*np.sin(yaw)+y*np.cos(yaw)
+    
     #Shift y2 axis by hubdistance
-    y2 = y2+hubdist
+    y2 = y+hubdist
 
     #Compute rho and theta
     rho = np.sqrt(x2**2+y2**2)
@@ -413,6 +412,9 @@ def radialGrad(x,y,hubscale,yaw,hubdist):
     #Compute derivatives
     gx = hubscale * (np.cos(theta)/rho)
     gy = -hubscale * (np.sin(theta)/rho)
+
+    #Rotate derivatives
+    gx,gy = gx*np.cos(-yaw)+gy*np.sin(-yaw),-gx*np.sin(-yaw)+gy*np.cos(-yaw)
 
     return gx,gy
 
