@@ -3,5 +3,10 @@
 # Ignore compiled versions of Fortran
 *.so
 *.so.dSYM/
+*.pyd
 # Ignore the DS Store and needed import __init__.pyc
 *.DS_Store
+*.xml
+*.iml
+# Ignore files for ipython/jupyter notebook and jupyter lab.
+.ipynb_checkpoints/*

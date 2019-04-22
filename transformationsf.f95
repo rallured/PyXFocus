@@ -35,7 +35,7 @@ subroutine rotateaxis(x,y,z,theta,ux,uy,uz)
   real*8, intent(inout) :: theta,ux,uy,uz
   real*8 :: output(3),s,c,mag
   !real*8, dimension(3) :: rotatevector
-  
+
   !Ensure axis is normalized
   mag = sqrt(ux**2 + uy**2 + uz**2)
   ux = ux/mag
@@ -47,7 +47,7 @@ subroutine rotateaxis(x,y,z,theta,ux,uy,uz)
   output(1) = (c+ux**2*(1-c))*x + (ux*uy*(1-c)-uz*s)*y + (ux*uz*(1-c)+uy*s)*z
   output(2) = (uy*ux*(1-c)+uz*s)*x + (c+uy**2*(1-c))*y + (uy*uz*(1-c)-ux*s)*z
   output(3) = (uz*ux*(1-c)-uy*s)*x + (uz*uy*(1-c)+ux*s)*y + (c+uz**2*(1-c))*z
-  
+
   x = output(1)
   y = output(2)
   z = output(3)
@@ -87,7 +87,7 @@ subroutine refract(l,m,n,ux,uy,uz,num,n1,n2)
   real*8, intent(inout) :: l(num),m(num),n(num),ux(num),uy(num),uz(num)
   integer :: i
   real*8 :: dot,t1,t2,alpha,cx,cy,cz
-  
+
   !Loop through rays
   !$omp parallel do private(dot,t1,t2,cx,cy,cz,alpha)
   do i=1,num
@@ -196,7 +196,7 @@ subroutine itransform(x,y,z,l,m,n,ux,uy,uz,num,tx,ty,tz,rx,ry,rz)
 end subroutine itransform
 
 !Radially grooved grating diffraction
-!Assumes grating in x y plane, with grooves converging at 
+!Assumes grating in x y plane, with grooves converging at
 !hubdist in positive y direction
 subroutine radgrat(x,y,l,m,n,wave,num,dpermm,order)
   !Declarations
@@ -226,7 +226,7 @@ subroutine radgrat(x,y,l,m,n,wave,num,dpermm,order)
     l(i) = l(i) + sin(yaw)*order*wave/d
     m(i) = m(i) - cos(yaw)*order*wave/d
     n(i) = sn*sqrt(1. - l(i)**2 - m(i)**2)
-    
+
   end do
 
 end subroutine radgrat
@@ -269,16 +269,16 @@ subroutine radgratcenter(x,y,l,m,n,wave,num,dpermm,order,hubdist)
 end subroutine radgratcenter
 
 !Radially grooved grating diffraction with wavelength vector
-!Assumes grating in x y plane, with grooves converging at 
+!Assumes grating in x y plane, with grooves converging at
 !hubdist in positive y direction
 subroutine radgratW(x,y,l,m,n,wave,num,dpermm,order)
   !Declarations
   integer, intent(in) :: num
-  real*8, intent(in) :: x(num),y(num)
-  real*8, intent(inout) :: l(num),m(num),n(num),wave(num)
+  real*8, intent(in) :: x(num),y(num),wave(num)
+  real*8, intent(inout) :: l(num),m(num),n(num)
   real*8, intent(in) :: dpermm,order
   integer :: i
-  real*8 :: d, yaw, pi, dum, det
+  real*8 :: d, yaw, pi, dum, det, sn
 
   pi = acos(-1.)
 
@@ -287,8 +287,8 @@ subroutine radgratW(x,y,l,m,n,wave,num,dpermm,order)
     !Compute local d spacing in nm
     d = dpermm * sqrt(y(i)**2 + x(i)**2)
     !Compute local yaw
-    sn = y(i) / abs(y(i))
-    yaw = pi/2 + atan(x(i)/abs(y(i)))
+    sn = n(i) / abs(n(i))
+    yaw = pi/2 - atan(x(i)/abs(y(i)))
     !print *, x(i),y(i),d,yaw
     !print *, l(i),m(i),n(i)
 
@@ -297,7 +297,7 @@ subroutine radgratW(x,y,l,m,n,wave,num,dpermm,order)
     !Compute new direction cosines - evanescence will result in NaNs
     l(i) = l(i) + sin(yaw)*order*wave(i)/d
     m(i) = m(i) - cos(yaw)*order*wave(i)/d
-    n(i) = sqrt(1. - l(i)**2 - m(i)**2)
+    n(i) = sn*sqrt(1. - l(i)**2 - m(i)**2)
   end do
 
 end subroutine radgratW
@@ -319,9 +319,11 @@ subroutine grat(x,y,l,m,n,num,d,order,wave)
   !Loop through rays, compute new diffracted ray direction
   !$omp parallel do
   do i=1,num
+    !Save sign of n
+    sn = n(i) / abs(n(i))
     !Compute new direction cosines
     l(i) = l(i) - order(i)*wave(i)/d
-    n(i) = sqrt(1 - l(i)**2 - m(i)**2)
+    n(i) = sn*sqrt(1 - l(i)**2 - m(i)**2)
     !Evanescence?
     if ((l(i)**2+m(i)**2)>1) then
       l(i) = 0.
