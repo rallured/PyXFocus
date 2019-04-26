@@ -196,8 +196,7 @@ subroutine itransform(x,y,z,l,m,n,ux,uy,uz,num,tx,ty,tz,rx,ry,rz)
 end subroutine itransform
 
 !Radially grooved grating diffraction
-!Assumes grating in x y plane, with grooves converging at 
-!hubdist in positive y direction
+!Assumes grating in x y plane, with hub at origin
 subroutine radgrat(x,y,l,m,n,wave,num,dpermm,order)
   !Declarations
   integer, intent(in) :: num
@@ -216,8 +215,6 @@ subroutine radgrat(x,y,l,m,n,wave,num,dpermm,order)
     !Compute local d spacing in nm
     d = dpermm * sqrt(y(i)**2 + x(i)**2)
     !Compute local yaw
-    !yaw = pi/2 - atan(-x(i)/abs(y(i)))
-    !print *, yaw
     yaw = -pi/2 - atan2(x(i),y(i))
     !print *, yaw
     !read *, dum
@@ -235,46 +232,8 @@ subroutine radgrat(x,y,l,m,n,wave,num,dpermm,order)
 
 end subroutine radgrat
 
-!Radially grooved grating diffraction
-!Assumes grating in x y plane, with grooves converging at 
-!hubdist in positive y direction
-!Placed with origin at center of grating
-subroutine radgratcenter(x,y,l,m,n,wave,num,dpermm,order,hubdist)
-  !Declarations
-  integer, intent(in) :: num
-  real*8, intent(in) :: x(num),y(num)
-  real*8, intent(inout) :: l(num),m(num),n(num)
-  real*8, intent(in) :: dpermm,wave,order,hubdist
-  integer :: i
-  real*8 :: d, yaw, pi, dum, det, sn
-
-  pi = acos(-1.)
-
-  !Loop through rays, compute new diffracted ray direction
-  do i=1,num
-    !Save sign of n
-    sn = n(i) / abs(n(i))
-    !Compute local d spacing in nm
-    d = dpermm * sqrt((-y(i)+hubdist)**2 + x(i)**2)
-    !Compute local yaw
-    yaw = pi/2 - atan(x(i)/abs((hubdist-y(i))))
-    !print *, x(i),y(i),d,yaw
-    !print *, l(i),m(i),n(i)
-
-    !Evanescence?
-    !det = l(i)**2+m(i)**2
-    !Compute new direction cosines - evanescence will result in NaNs
-    l(i) = l(i) + sin(yaw)*order*wave/d
-    m(i) = m(i) - cos(yaw)*order*wave/d
-    n(i) = sn*sqrt(1. - l(i)**2 - m(i)**2)
-    
-  end do
-
-end subroutine radgratcenter
-
 !Radially grooved grating diffraction with wavelength vector
-!Assumes grating in x y plane, with grooves converging at 
-!hubdist in positive y direction
+!Assumes grating in x y plane, with hub at origin
 subroutine radgratW(x,y,l,m,n,wave,num,dpermm,order)
   !Declarations
   integer, intent(in) :: num
@@ -292,7 +251,8 @@ subroutine radgratW(x,y,l,m,n,wave,num,dpermm,order)
     d = dpermm * sqrt(y(i)**2 + x(i)**2)
     !Compute local yaw
     sn = y(i) / abs(y(i))
-    yaw = pi/2 + atan(x(i)/abs(y(i)))
+    !yaw = pi/2 + atan(x(i)/abs(y(i)))
+    yaw = -pi/2 - atan2(x(i),y(i))
     !print *, x(i),y(i),d,yaw
     !print *, l(i),m(i),n(i)
 
