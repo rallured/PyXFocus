@@ -4,27 +4,27 @@ import PyXFocus.surfacesf as surf
 import PyXFocus.zernsurf as zern
 import PyXFocus.woltsurf as wolt
 import PyXFocus.transformations as tran
-from PyXFocus.analyses import analyticYPlane,analyticXPlane,analyticImagePlane
+from PyXFocus.analyses import analyticYPlane, analyticXPlane, analyticImagePlane
 import PyXFocus.conicsolve as con
 import pdb
 import utilities.imaging.zernikemod as zernikemod
 
-def flat(rays,ind=None,nr=None):
-    """Trace rays to the XY plane
-    """
-    opd,x,y,z,l,m,n,ux,uy,uz = rays
+
+def flat(rays, ind=None, nr=None):
+    """Trace rays to the XY plane."""
+    opd, x, y, z, l, m, n, ux, uy, uz = rays
     if ind is not None:
-        #Temporary array
+        # Create a temporary array.
         trays = [rays[i][ind] for i in range(10)]
-        #Trace
+        # Trace rays to the surface.
         surf.flat(*trays[1:])
-        #Copy back to original
-        for i in range(1,10):
+        # Copy back to original variable.
+        for i in range(1, 10):
             rays[i][ind] = trays[i]
     elif nr is not None:
-        surf.flatopd(x,y,z,l,m,n,ux,uy,uz,opd,nr)
+        surf.flatopd(x, y, z, l, m, n, ux, uy, uz, opd, nr)
     else:
-        surf.flat(x,y,z,l,m,n,ux,uy,uz)
+        surf.flat(x, y, z, l, m, n, ux, uy, uz)
     return
 
 def zernsurf(rays,coeff,rad,rorder=None,aorder=None,nr=None):
@@ -131,11 +131,15 @@ def torus(rays,rin,rout):
     return
 
 def cyl(rays,rad,nr=None):
-    """Wrapper for cylindrical surface
     """
-    opd,x,y,z,l,m,n,ux,uy,uz = rays
+    Wrapper for cylindrical surface routine in Fortran.
+
+    The center of the cylinder is assumed to be at origin;
+    the y-axis is cylindrical axis.
+    """
+    opd, x, y, z, l, m, n, ux, uy, uz = rays
     if nr is not None:
-        surf.tracecylopd(opd,x,y,z,l,m,n,ux,uy,uz,rad,nr)
+        surf.tracecylopd(opd, x, y, z, l, m, n, ux, uy, uz, rad, nr)
     else:
         surf.tracecyl(x,y,z,l,m,n,ux,uy,uz,rad)
     return
@@ -469,7 +473,7 @@ def focus(rays,fn,weights=None,nr=None,coords=None):
     dz2 = fn(rays,weights=weights)
     tran.transform(rays,0,0,dz2,0,0,0,coords=coords)
     flat(rays,nr=nr)
-    
+
     return dz1+dz2
 
 def focusY(rays,weights=None,nr=None,coords=None):

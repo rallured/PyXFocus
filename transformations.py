@@ -3,10 +3,12 @@ import transformationsf as tran
 import transformMod as tr
 import pdb
 
+
 def copy_rays(rays):
     return [rays[i].copy() for i in range(len(rays))]
 
-def transform(rays,dx,dy,dz,rx,ry,rz,ind=None,coords=None):
+
+def transform(rays, dx, dy, dz, rx, ry, rz, ind=None, coords=None):
     """Coordinate transformation. translations are done first,
     then Rx,Ry,Rz
     coords[0] - global to local rotation only
@@ -38,7 +40,7 @@ def transform(rays,dx,dy,dz,rx,ry,rz,ind=None,coords=None):
         coords[1] = np.dot(np.dot(rotm,tranm),coords[1])
         coords[2] = np.dot(coords[2],rotmi)
         coords[3] = np.dot(coords[3],np.dot(tranmi,rotmi))
-    
+
     return
 
 
@@ -118,28 +120,55 @@ def refract(rays,n1,n2):
     tran.refract(l,m,n,ux,uy,uz,n1,n2)
     return
 
-def radgrat(rays,dpermm,order,wave,ind=None):
-    """Infinite radial grating. Assumes grating in x,y plane
-    with grooves converging at hubdist in positive y direction
-    dpermm is nm/mm
-    wave is in nm
+
+def radgrat(rays, dpermm, order, wave, ind=None):
     """
-    x,y,z,l,m,n = rays[1:7]
-    #Choose correct radgrat function
+    Infinite radial grating. Assumes grating in x-y plane with
+    grooves converging at hubdist in +y direction.
+
+    Parameters
+    ----------
+    rays : list
+        List of ray parameters [opd, x, y, z, l, m, n, ux, uy, uz]
+    dpermm : float
+        Groove period per unit distance from grating hub [nm/mm]
+    order : int / float
+        Diffraction order
+    wave : int / float / np.ndarray
+        Wavelength of incident rays [nm]
+    ind : NoneType or np.ndarray
+        Ray indices to diffract.
+    """
+    # Assign variables to ray parameters to pass to Fortran.
+    x, y, z, l, m, n = rays[1:7]
+
+    # Determine which radial grating function to use.
     if type(wave) == np.ndarray:
         fn = tran.radgratw
     else:
         fn = tran.radgrat
+
+    # Determine if we need to diffract specific indices or not.
     if ind is not None:
-        tx,ty,tl,tm,tn = x[ind],y[ind],l[ind],m[ind],n[ind]
-        if np.size(wave)==1:
+
+        # Assign variables to ray parameters to pass to Fortran.
+        tx, ty, tl, tm, tn = x[ind], y[ind], l[ind], m[ind], n[ind]
+
+        if np.size(wave) == 1:
             tw = wave
         else:
             tw = wave[ind]
-        fn(tx,ty,tl,tm,tn,tw,dpermm,order)
-        x[ind],y[ind],l[ind],m[ind],n[ind] = tx,ty,tl,tm,tn
+
+        # Pass ray parameters to Fortran function determined above.
+        fn(tx, ty, tl, tm, tn, tw, dpermm, order)
+
+        # Update values in ray list.
+        x[ind], y[ind], l[ind], m[ind], n[ind] = tx, ty, tl, tm, tn
+
     else:
-        fn(x,y,l,m,n,wave,dpermm,order)
+        # Pass ray parameters to Fortran function.
+        fn(x, y, l, m, n, wave, dpermm, order)
+
     return
 
 def radgratcenter(rays,dpermm,order,wave,hubdist,ind=None):
@@ -187,12 +216,12 @@ def vignette(rays,ind=None):
     ind is array of "good" indices, all others are removed
     """
     opd,x,y,z,l,m,n,ux,uy,uz = rays
-    
+
     if ind is None:
         mag = l**2+m**2+n**2
         ind = np.where(mag>.1) #Automatic vignetting
                         #requires position vector set to 0.
-    
+
     return [rays[i][ind] for i in range(10)]
 
 #Transformation matrix helper functions
@@ -249,7 +278,7 @@ def applyT(rays,coords,inverse=False):
             pos[0],pos[1],pos[2],\
             wave[0],wave[1],wave[2],\
             norm[0],norm[1],norm[2]]
-    
+
 def applyTPos(x,y,z,coords,inverse=False):
     """Apply transformation to list of points"""
     i = 0

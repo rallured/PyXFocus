@@ -66,7 +66,7 @@ def rho(rays,weights=None,cent=False):
     else:
         cx,cy = 0,0
     rho = np.sqrt((x-cx)**2+(y-cy)**2)
-    
+
     return rho
 
 def rhocdf(rays,weights=None,cent=True):
@@ -81,14 +81,14 @@ def rhocdf(rays,weights=None,cent=True):
     r = r[ind]
     cdf = np.cumsum(weights)
     cdf = cdf / cdf.max()
-    
+
     return r,cdf
 
-def hpd(rays,weights=None):
+def hpd(rays,weights=None, cent=True):
     """Compute HPD by taking median of radii from centroid"""
-    r = rho(rays,weights=weights)
+    r = rho(rays, weights=weights, cent=True)
     if weights is not None:
-        r,cdf = rhocdf(rays,weights=weights)
+        r, cdf = rhocdf(rays, weights=weights, cent=True)
         hpd = r[np.argmin(np.abs(cdf-.75))] - \
               r[np.argmin(np.abs(cdf-.25))]
     else:
@@ -128,7 +128,7 @@ def analyticImagePlane(rays,weights=None):
     ay = np.average((m/n)**2,weights=weights)\
          -np.average(m/n,weights=weights)**2
     dz = -(bx+by)/(ax+ay)
-    
+
     return dz
 
 def analyticYPlane(rays,weights=None):
@@ -199,9 +199,10 @@ def interpolateVec(rays,I,Nx,Ny,xr=None,yr=None,method='linear',\
     """
     #Unpack needed vectors
     x,y = rays[1:3]
+    #Allow for arbitrary vector to be interpolated over x,y coordinates
     if interpVec is None:
         interpVec = rays[I]
-    
+ 
     #Set up new grid
     if xr is None:
         xr=[x.min(),x.max()]
@@ -224,7 +225,7 @@ def interpolateVec(rays,I,Nx,Ny,xr=None,yr=None,method='linear',\
         res = np.nanmedian([res1,res2],axis=0)
     else:
         res = griddata((x,y),interpVec,(gridx,gridy),method=method)
-    
+
     return res,dx,dy
 
 def measureOPD(rays,point):
@@ -301,7 +302,7 @@ def wavefront(rays,Nx,Ny,method='cubic',polar=False):
     #Interpolate slopes to regular grid
     y,dx,dy = interpolateVec(rays,5,Nx,Ny,method=method,polar=polar)
     x,dx,dy = interpolateVec(rays,4,Nx,Ny,method=method,polar=polar)
-        
+
 
     #Prepare arrays for integration
     #Reconstruct requires nans be replaced by 100
@@ -316,7 +317,7 @@ def wavefront(rays,Nx,Ny,method='cubic',polar=False):
     y = np.array(y,order='F')
     x = np.array(x,order='F')
 
-    #Reconstruct and remove border    
+    #Reconstruct and remove border
     phase = reconstruct.reconstruct(y,x,1e-12,dx,phase)
     phase[phase==100] = np.nan
     x[x==100] = np.nan
@@ -340,7 +341,7 @@ def measurePower(rays,Nx,Ny,method='linear'):
     xpow = 1/np.gradient(xsl,dx)[Nx/2]
     ypow = 1/np.gradient(ysl,dy)[Ny/2]
     return -xpow,-ypow
-    
+
 
 def compareOPDandSlopes(rays,Nx,Ny,method='linear'):
     """
@@ -355,12 +356,12 @@ def compareOPDandSlopes(rays,Nx,Ny,method='linear'):
     m,dx = interpolateVec(rays,5,Nx,Ny,method=method)
     #Make plots
     fig = plt.figure()
-    
+
     fig.add_subplot(321)
     plt.imshow(grady)
     plt.title('Gradx')
     plt.colorbar()
-    
+
     fig.add_subplot(322)
     plt.imshow(gradx)
     plt.title('Grady')
@@ -388,7 +389,7 @@ def compareOPDandSlopes(rays,Nx,Ny,method='linear'):
 
     print 'X Diff:' + str(np.sqrt(np.nanmean((grady-l)**2)))
     print 'Y Diff:' + str(np.sqrt(np.nanmean((gradx-m)**2)))
-    
+
     return
 
 def radialGrad(x,y,hubscale,yaw,hubdist):
