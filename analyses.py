@@ -418,5 +418,3 @@ def radialGrad(x,y,hubscale,yaw,hubdist):
     gx,gy = gx*np.cos(-yaw)+gy*np.sin(-yaw),-gx*np.sin(-yaw)+gy*np.cos(-yaw)
 
     return gx,gy
-
-
