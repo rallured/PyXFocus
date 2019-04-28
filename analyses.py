@@ -268,8 +268,8 @@ def OPDtoLegendreP(x,y,opd,xo,yo,xwidth=1.,ywidth=1.):
     cy = np.polynomial.legendre.legder(res[1],axis=1)
     #gy = np.polynomial.legendre.legval2d(x/xwidth,y/ywidth,cx)/xwidth
     #gx = np.polynomial.legendre.legval2d(x/xwidth,y/ywidth,cy)/ywidth
-    gy = np.polynomial.legendre.legval2d(-y/ywidth,x/xwidth,cx)/xwidth
-    gx = np.polynomial.legendre.legval2d(-y/ywidth,x/xwidth,cy)/ywidth
+    gy = np.polynomial.legendre.legval2d(-y/ywidth,x/xwidth,cx)/ywidth
+    gx = np.polynomial.legendre.legval2d(-y/ywidth,x/xwidth,cy)/xwidth
     
     return coeff,xorder,yorder,gx,gy
 
