@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import reconstruct
+import pdb  
 
 def padArrays(imglist):
     """
@@ -16,7 +17,7 @@ def padArrays(imglist):
         
     return outimg
 
-def southwell(gx,gy,criteria,h,maxiter=1000):
+def southwell(gx,gy,criteria,h,maxiter=10000):
     """
     Take 2D x and y gradient arrays and perform Southwell reconstruction.
     If RMS difference in slope from one iteration to the next falls below
@@ -24,14 +25,21 @@ def southwell(gx,gy,criteria,h,maxiter=1000):
     gx and gy should be in units of slope (rise/run)
     h is in units of step size (e.g. lenslet width)
     """
+    #Handle missing data
+    ind = np.logical_or(np.isnan(gx),np.isnan(gy))
+    gx[ind] = 100.
+    gy[ind] = 100.
     #Create phase object
     phase = np.zeros(np.shape(gx),order='F')
+    phase[ind] = 100.
     #Pad arrays
     phase,gx,gy = padArrays([phase,gx,gy])
     #Send through reconstructor
     reconstruct.reconstruct(gx,gy,1e-10,1.,phase,maxiter)
     #Strip off border
     phase = phase[1:-1,1:-1]
+    #Handle missing data
+    phase[ind] = np.nan
     #Return inverse due to reconstructor sign convention
     return -phase
     
@@ -45,8 +53,13 @@ def example():
     img = np.polynomial.legendre.legval2d(xg,yg,[[0,1,0],[0,.5,0],[1,0,0]])
     #Take gradients
     gx,gy = np.gradient(img)
+    #Create a boundary region
+    rad = np.sqrt(xg**2+yg**2)
+    img[rad>1] = np.nan
+    gx[rad>1] = np.nan
+    gy[rad>1] = np.nan
     #Reconstruct wavefront
-    recon = southwell(gx,gy,1e-10,1.)
+    recon = southwell(gx,gy,1e-12,1.)
 
     #Plot results
     fig = plt.figure()
@@ -62,3 +75,4 @@ def example():
     plt.imshow(img-recon)
     plt.title('Residual')
     plt.colorbar()
+    return recon

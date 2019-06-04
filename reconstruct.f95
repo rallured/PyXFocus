@@ -107,9 +107,9 @@ subroutine reconstruct(xang,yang,xdim,ydim,criteria,h,phase,phasec,maxiter)
         end do
 
         !Determine rms improvement
-        print *, rms, nannum
+        !print *, rms, nannum
         rms = sqrt(rms/nannum)
-        print *, rms/nannum
+        !print *, rms/nannum
         phase = phasec !Copy new phase array to old phase array
 
         if (rms < criteria) then

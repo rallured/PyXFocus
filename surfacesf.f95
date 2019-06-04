@@ -543,11 +543,9 @@ subroutine conicplus(x,y,z,l,m,n,ux,uy,uz,num,R,K,p,Np)
       !F = rad**2 - 2*R*(z(i)-a0) + (K+1)*(z(i)-a0)**2
       denom = sqrt(1-(K+1)*c**2*rad**2)+1
       F = z(i) - c*rad**2 / denom + a0
-      !Fr = 2*rad + 2*R*a1 - (K+1)*2*(z(i)-a0)*a1
       Fr = -(2*c*rad/denom + ((K+1)*rad**3*c**3)/(denom**2*sqrt(1-(K+1)*c**2*rad**2)))+a1
       Fx = Fr * x(i)/rad
       Fy = Fr * y(i)/rad
-      !Fz = -2*R + (K+1)*2*(z(i)-a0)
       Fp = Fx*l(i) + Fy*m(i) + Fz*n(i)
       delt = -F/Fp
       !print *, x(i),y(i),z(i)
