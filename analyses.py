@@ -273,6 +273,13 @@ def OPDtoLegendreP(x,y,opd,xo,yo,xwidth=1.,ywidth=1.):
     
     return coeff,xorder,yorder,gx,gy
 
+def OPDtoZernike(x,y,opd,N,xwidth=1.,ywidth=1.):
+    """
+    Fit standard Zernike coefficients to OPD vector
+    """
+    res = zern.fitvec(x/xwidth,y/ywidth,opd,N=N)
+    return res
+
 def OPDtoSqZernike(x,y,opd,N,xwidth=1.,ywidth=1.):
     """
     Fit Square Zernike coefficients over ray XY plane to OPD.
@@ -387,8 +394,8 @@ def compareOPDandSlopes(rays,Nx,Ny,method='linear'):
     plt.title('m-grady')
     plt.colorbar()
 
-    print 'X Diff:' + str(np.sqrt(np.nanmean((grady-l)**2)))
-    print 'Y Diff:' + str(np.sqrt(np.nanmean((gradx-m)**2)))
+    print('X Diff:' + str(np.sqrt(np.nanmean((grady-l)**2))))
+    print('Y Diff:' + str(np.sqrt(np.nanmean((gradx-m)**2))))
 
     return
 
@@ -418,3 +425,27 @@ def radialGrad(x,y,hubscale,yaw,hubdist):
     gx,gy = gx*np.cos(-yaw)+gy*np.sin(-yaw),-gx*np.sin(-yaw)+gy*np.cos(-yaw)
 
     return gx,gy
+
+def sellmeier(wave,B,C):
+    """
+    Compute refractive index using Sellmeier coefficients
+    """
+    #Reshape input arrays for matrix multiplication
+    wave = np.reshape(wave,[np.size(wave),1]) #column vector
+    B = np.reshape(B,[1,np.size(B)]) #row vector
+    C = np.reshape(C,[1,np.size(C)]) #row vector
+
+    #Do the required matrix multiplication to evaluate Sellmeier equation
+    num = np.dot(wave**2,B)
+    den = wave**2-C
+    frac = num/den
+    n2 = 1 + np.sum(frac,axis=1)
+    n = np.sqrt(n2)
+
+    return n
+
+
+
+
+
+    

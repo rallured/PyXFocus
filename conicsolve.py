@@ -90,11 +90,11 @@ def rGoal_to_rMax(rgoal,z0,zmax):
 #Determine set of primary prescriptions to intercept beam
 def primaryintercept(rmax,rmin,z0,zmin,zmax):
     rnew = rGoal_to_rMax(rmax,z0,zmax)
-    print rnew
+    print(rnew)
     while rnew > rmin:
         rmax = primrad(zmin,rnew,z0)
         rnew = rGoal_to_rMax(rmax,z0,zmax)
-        print rnew
+        print(rnew)
 
 #W-S Parameters
 def wsPrimFunction(r0,z0,psi,x,y,z):

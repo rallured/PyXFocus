@@ -377,3 +377,40 @@ def rectbeam(xhalfwidth, yhalfwidth, num):
     opd = np.repeat(0., num)
 
     return [opd, x, y, z, l, m, n, ux, uy, uz]
+
+def gaussianBeam(ang, num):
+    '''
+    Gaussian source with a specified angular divergence.
+
+    Note: Rays points in the +z direction.
+
+    Parameters
+    ----------
+    ang : float
+        Angular divergence of rays. (1-sigma)
+    num : int
+        Number of rays to create.
+
+    Returns
+    -----
+    rays : list
+        List of ray parameters [opd, x, y, z, l, m, n, ux, uy, uz].
+
+    '''
+    # Radial direction cosine magnitude
+    #rho = np.random.randn(num)*np.sin(ang)
+    #theta = np.random.rand(num)*2*np.pi
+    #l = rho*np.cos(theta)
+    #m = rho*np.sin(theta)
+    l = np.random.randn(num)*np.sin(ang)/np.sqrt(2)
+    m = np.random.randn(num)*np.sin(ang)/np.sqrt(2)
+    n = np.sqrt(1.-l**2-m**2)
+    x = np.repeat(0., num)
+    y = np.repeat(0., num)
+    z = np.repeat(0., num)
+    ux = np.repeat(0., num)
+    uy = np.repeat(0., num)
+    uz = np.repeat(0., num)
+    opd = np.repeat(0., num)
+
+    return [opd, x, y, z, l, m, n, ux, uy, uz]
