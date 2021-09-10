@@ -174,7 +174,7 @@ subroutine itransform(x,y,z,l,m,n,ux,uy,uz,num,tx,ty,tz,rx,ry,rz)
   real*8 :: tmp
 
   !Loop through rays
-  !$omp parallel do
+  !$omp parallel do private(tmp)
   do i=1,num
     !Perform z rotation
     tmp = -rz
