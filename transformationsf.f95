@@ -86,7 +86,7 @@ subroutine refract(l,m,n,ux,uy,uz,num,n1,n2)
   real*8, intent(in) :: n1,n2
   real*8, intent(inout) :: l(num),m(num),n(num),ux(num),uy(num),uz(num)
   integer :: i
-  real*8 :: dot,t1,t2,alpha,cx,cy,cz
+  real*8 :: dot,t1,t2,alpha,cx,cy,cz,dt
 
   !Loop through rays
   !$omp parallel do private(dot,t1,t2,cx,cy,cz,alpha)
@@ -117,7 +117,8 @@ subroutine refract(l,m,n,ux,uy,uz,num,n1,n2)
     cy = l(i)*uz(i)-ux(i)*n(i)
     cz = ux(i)*m(i)-l(i)*uy(i)
     !Rotate about cross vector an angle t2-t1
-    call rotateaxis(l(i),m(i),n(i),t2-t1,cx,cy,cz)
+    dt = t2-t1
+    call rotateaxis(l(i),m(i),n(i),dt,cx,cy,cz)
     !Normalize
     alpha = sqrt(l(i)**2 + m(i)**2 + n(i)**2)
     l(i) = l(i)/alpha
@@ -170,22 +171,26 @@ subroutine itransform(x,y,z,l,m,n,ux,uy,uz,num,tx,ty,tz,rx,ry,rz)
   real*8, intent(inout) :: tx,ty,tz,rx,ry,rz
   real*8, intent(inout) :: x(num),y(num),z(num),l(num),m(num),n(num),ux(num),uy(num),uz(num)
   integer :: i
+  real*8 :: tmp
 
   !Loop through rays
-  !$omp parallel do
+  !$omp parallel do private(tmp)
   do i=1,num
     !Perform z rotation
-    call rotatevector(x(i),y(i),z(i),-rz,3)
-    call rotatevector(l(i),m(i),n(i),-rz,3)
-    call rotatevector(ux(i),uy(i),uz(i),-rz,3)
+    tmp = -rz
+    call rotatevector(x(i),y(i),z(i),tmp,3)
+    call rotatevector(l(i),m(i),n(i),tmp,3)
+    call rotatevector(ux(i),uy(i),uz(i),tmp,3)
     !Perform y rotation
-    call rotatevector(x(i),y(i),z(i),-ry,2)
-    call rotatevector(l(i),m(i),n(i),-ry,2)
-    call rotatevector(ux(i),uy(i),uz(i),-ry,2)
+    tmp = -ry
+    call rotatevector(x(i),y(i),z(i),tmp,2)
+    call rotatevector(l(i),m(i),n(i),tmp,2)
+    call rotatevector(ux(i),uy(i),uz(i),tmp,2)
     !Perform x rotation
-    call rotatevector(x(i),y(i),z(i),-rx,1)
-    call rotatevector(l(i),m(i),n(i),-rx,1)
-    call rotatevector(ux(i),uy(i),uz(i),-rx,1)
+    tmp = -rx
+    call rotatevector(x(i),y(i),z(i),tmp,1)
+    call rotatevector(l(i),m(i),n(i),tmp,1)
+    call rotatevector(ux(i),uy(i),uz(i),tmp,1)
     !Perform translation
     x(i) = x(i) - tx
     y(i) = y(i) - ty
