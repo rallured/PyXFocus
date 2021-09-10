@@ -26,7 +26,7 @@ def pointsource(ang, num):
     Parameters
     ----------
     ang : float
-        Angular divergence of rays.
+        Angular divergence of rays. (half angle)
     num : int
         Number of rays to create.
 

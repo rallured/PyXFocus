@@ -122,6 +122,32 @@ def conicplus(rays,R,K,p,nr=None):
         surf.conicplus(x,y,z,l,m,n,ux,uy,uz,R,K,p)
     return
 
+def oapCollimate(rays,efl,oapangle,nr=None):
+    """
+    Trace rays to a collimating OAP
+    Origin should be at nominal OAP intersection
+    -z points toward OAP focus
+    Collimated beam will point in -y direction
+    """
+    #Calculate parent focal length of parabola
+    fp = efl*(1+np.cos(oapangle))/2
+
+    #Go to OAP vertex
+    tran.transform(rays,0,0,-efl,0,0,0)
+    tran.transform(rays,0,0,0,oapangle,0,0)
+    tran.transform(rays,0,0,-fp,0,0,0)
+
+    #Trace to conic and reflect
+    conic(rays,fp*2,-1,nr=nr)
+    tran.reflect(rays)
+
+    #Go back to nominal intersection point
+    tran.itransform(rays,0,0,-fp,0,0,0)
+    tran.itransform(rays,0,0,0,oapangle,0,0)
+    tran.itransform(rays,0,0,-efl,0,0,0)
+
+    return
+
 def torus(rays,rin,rout):
     """Wrapper for toroidal surface. Outer radius
     is in xy plane, inner radius is orthogonal.
