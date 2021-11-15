@@ -8,6 +8,7 @@ from PyXFocus.analyses import analyticYPlane, analyticXPlane, analyticImagePlane
 import PyXFocus.conicsolve as con
 import pdb
 import utilities.imaging.zernikemod as zernikemod
+import matplotlib.pyplot as plt
 
 
 def flat(rays, ind=None, nr=None):
@@ -133,8 +134,9 @@ def oapCollimate(rays,efl,oapangle,nr=None):
     fp = efl*(1+np.cos(oapangle))/2
 
     #Go to OAP vertex
-    tran.transform(rays,0,0,-efl,0,0,0)
-    tran.transform(rays,0,0,0,oapangle,0,0)
+    tran.transform(rays,0,0,0,np.pi,0,0)
+    tran.transform(rays,0,0,efl,0,0,0)
+    tran.transform(rays,0,0,0,-oapangle,0,0)
     tran.transform(rays,0,0,-fp,0,0,0)
 
     #Trace to conic and reflect
@@ -143,8 +145,9 @@ def oapCollimate(rays,efl,oapangle,nr=None):
 
     #Go back to nominal intersection point
     tran.itransform(rays,0,0,-fp,0,0,0)
-    tran.itransform(rays,0,0,0,oapangle,0,0)
-    tran.itransform(rays,0,0,-efl,0,0,0)
+    tran.itransform(rays,0,0,0,-oapangle,0,0)
+    tran.itransform(rays,0,0,efl,np.pi,0,0)
+    tran.itransform(rays,0,0,0,np.pi,0,0)
 
     return
 
