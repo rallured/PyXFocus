@@ -133,23 +133,27 @@ def oapCollimate(rays,efl,oapangle,nr=None):
     #Calculate parent focal length of parabola
     fp = efl*(1+np.cos(oapangle))/2
 
+    #Set up coordinate transformation
+    coords = tran.newCoords()
+
     #Go to OAP vertex
-    tran.transform(rays,0,0,0,np.pi,0,0)
-    tran.transform(rays,0,0,efl,0,0,0)
-    tran.transform(rays,0,0,0,-oapangle,0,0)
-    tran.transform(rays,0,0,-fp,0,0,0)
+    #tran.transform(rays,0,0,0,np.pi,0,0)
+    tran.transform(rays,0,0,-efl,0,0,0,coords=coords)
+    tran.transform(rays,0,0,0,np.pi-oapangle,0,0,coords=coords)
+    tran.transform(rays,0,0,-fp,0,0,0,coords=coords)
 
     #Trace to conic and reflect
     conic(rays,fp*2,-1,nr=nr)
     tran.reflect(rays)
 
     #Go back to nominal intersection point
-    tran.itransform(rays,0,0,-fp,0,0,0)
-    tran.itransform(rays,0,0,0,-oapangle,0,0)
-    tran.itransform(rays,0,0,efl,np.pi,0,0)
-    tran.itransform(rays,0,0,0,np.pi,0,0)
+    #tran.itransform(rays,0,0,-fp,0,0,0)
+    #tran.itransform(rays,0,0,0,-oapangle,0,0)
+    #tran.itransform(rays,0,0,efl,np.pi,0,0)
+    #tran.itransform(rays,0,0,0,np.pi,0,0)
+    rays = tran.applyT(rays,coords,inverse=True)
 
-    return
+    return rays
 
 def torus(rays,rin,rout):
     """Wrapper for toroidal surface. Outer radius
