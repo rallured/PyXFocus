@@ -414,3 +414,29 @@ def gaussianBeam(ang, num):
     opd = np.repeat(0., num)
 
     return [opd, x, y, z, l, m, n, ux, uy, uz]
+
+def fanBeam(xang,yang,num):
+    """
+    Generate an XY fan of rays on a regular direction cosine grid
+    """
+    #Generate direction cosine grid
+    xx = np.linspace(-xang,xang,num)
+    yy = np.linspace(-yang,yang,num)
+    [xa,ya] = np.meshgrid(xx,yy)
+    xa = xa.flatten()
+    ya = ya.flatten()
+    num = np.size(xa)
+
+    #Generate rays
+    l = np.sin(xa)
+    m = np.sin(ya)
+    n = np.sqrt(1.-l**2-m**2)
+    x = np.repeat(0., num)
+    y = np.repeat(0., num)
+    z = np.repeat(0., num)
+    ux = np.repeat(0., num)
+    uy = np.repeat(0., num)
+    uz = np.repeat(0., num)
+    opd = np.repeat(0., num)
+
+    return [opd, x, y, z, l, m, n, ux, uy, uz]
