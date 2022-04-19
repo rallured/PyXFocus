@@ -11,6 +11,7 @@ import utilities.imaging.zernikemod as zern
 import PyXFocus.reconstruct as reconstruct
 import astropy.io.fits as pyfits
 import PyXFocus.specialfunctions as special
+#from PyXFocus.surfaces import focusI
 
 def centroid(rays,weights=None):
     """Compute the centroid of the rays in the xy plane
