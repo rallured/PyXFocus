@@ -440,3 +440,32 @@ def fanBeam(xang,yang,num):
     opd = np.repeat(0., num)
 
     return [opd, x, y, z, l, m, n, ux, uy, uz]
+
+def circFan(halfang,rings,arms):
+    """
+    Generate uniformly spaced rays on a diverging cone
+    """
+    #Generate direction cosine grid
+    rad = np.linspace(0,halfang,rings)
+    az = np.linspace(0,2*np.pi,arms+1)
+    az = az[0:-1]
+    [rr,aa] = np.meshgrid(rad,az)
+    xx = np.sin(rr)*np.cos(aa)
+    yy = np.sin(rr)*np.sin(aa)
+    xa = xx.flatten()
+    ya = yy.flatten()
+    num = np.size(xa)
+
+    #Generate rays
+    l = np.sin(xa)
+    m = np.sin(ya)
+    n = np.sqrt(1.-l**2-m**2)
+    x = np.repeat(0., num)
+    y = np.repeat(0., num)
+    z = np.repeat(0., num)
+    ux = np.repeat(0., num)
+    uy = np.repeat(0., num)
+    uz = np.repeat(0., num)
+    opd = np.repeat(0., num)
+
+    return [opd, x, y, z, l, m, n, ux, uy, uz]
